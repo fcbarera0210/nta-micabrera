@@ -1,0 +1,483 @@
+'use client';
+
+import React, { useState } from 'react';
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Iconos SVG personalizados
+const LeafIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8a7 7 0 0 1-7 7c-1.18 0-2.34-.38-3.3-1.1Z"/><path d="M14 17v5"/><path d="M10 20.95A7 7 0 0 1 4 14c0-3.82 1-5.66 2.67-7.67"/><path d="M6.7 13.8a2.12 2.12 0 0 0 2.5 2.5"/></svg>
+);
+
+const HeartIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+);
+
+const CheckIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+);
+
+const PlayIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-white"><path d="m7 4 12 8-12 8V4z"/></svg>
+);
+
+const WhatsAppIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-7.6 8.38 8.38 0 0 1 3.8.9L22 4Z"/></svg>
+);
+
+const FloatingBubble = ({ className, delay = 0 }: { className: string; delay?: number }) => (
+  <motion.div
+    className={`absolute rounded-full mix-blend-multiply filter blur-xl opacity-20 ${className}`}
+    animate={{
+      y: [0, -30, 0],
+      scale: [1, 1.1, 1],
+    }}
+    transition={{
+      duration: 7,
+      repeat: Infinity,
+      delay: delay,
+      ease: 'easeInOut',
+    }}
+  />
+);
+
+const HERO_IMG = 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=800&q=80';
+
+export default function HomePage() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [bookingStep, setBookingStep] = useState(1);
+  const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [activeCategory, setActiveCategory] = useState('Todas');
+
+  const cardVariants = {
+    offscreen: { y: 30, opacity: 0 },
+    onscreen: {
+      y: 0,
+      opacity: 1,
+      transition: { type: 'spring', bounce: 0.3, duration: 0.8 },
+    },
+  };
+
+  const recipes = [
+    { id: 1, title: 'Bowl de Avena y Frutos Rojos', category: 'Desayunos', time: '10 min', img: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=800&q=80' },
+    { id: 2, title: 'Ensalada de Garbanzos Crunchy', category: 'Almuerzos', time: '20 min', img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80' },
+    { id: 3, title: 'Hummus de Betarraga', category: 'Snacks', time: '15 min', img: 'https://images.unsplash.com/photo-1541518763669-27fef04b14ea?auto=format&fit=crop&w=800&q=80' },
+    { id: 4, title: 'Smoothie Verde Energizante', category: 'Desayunos', time: '5 min', img: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80' },
+  ];
+
+  const filteredRecipes = activeCategory === 'Todas' ? recipes : recipes.filter((r) => r.category === activeCategory);
+
+  return (
+    <div className="min-h-screen bg-[#faf8ff] font-sans text-slate-800 overflow-x-hidden selection:bg-purple-200">
+      {/* --- Navegación --- */}
+      <nav className="fixed w-full z-50 bg-white/70 backdrop-blur-lg border-b border-purple-100">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="bg-purple-600 p-1.5 rounded-lg text-white">
+              <LeafIcon />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xl font-serif font-bold text-purple-950 leading-none">Mica Cabrera</span>
+              <span className="text-[10px] uppercase tracking-widest text-purple-600 font-bold">Nutricionista</span>
+            </div>
+          </div>
+
+          <div className="hidden md:flex gap-8 text-sm font-semibold text-purple-950/70">
+            {['Inicio', 'Dirigido a', 'Servicios', 'Recetas', 'Contacto', 'Reserva'].map((item) => (
+              <button
+                key={item}
+                onClick={() => {
+                  const id = item.toLowerCase().replace(' ', '-');
+                  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="hover:text-purple-600 transition-colors relative group"
+              >
+                {item}
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-purple-400 transition-all group-hover:w-full" />
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => document.getElementById('reserva')?.scrollIntoView({ behavior: 'smooth' })}
+            className="hidden md:block bg-purple-900 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-purple-800 transition-all shadow-lg"
+          >
+            Agendar Hora
+          </button>
+
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-purple-900" aria-label="Abrir menú">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+        </div>
+      </nav>
+
+      {/* Menú Móvil */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-purple-950 text-white p-10 flex flex-col justify-center gap-8 text-center"
+          >
+            <button onClick={() => setIsMenuOpen(false)} className="absolute top-8 right-8 p-2" aria-label="Cerrar menú">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            {['Inicio', 'Dirigido a', 'Servicios', 'Recetas', 'Contacto', 'Agendar'].map((item) => (
+              <button key={item} onClick={() => setIsMenuOpen(false)} className="text-4xl font-serif">{item}</button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- Hero Section --- */}
+      <header id="inicio" className="relative pt-44 pb-24 px-6 overflow-hidden">
+        <FloatingBubble className="bg-purple-300 w-80 h-80 -top-20 -right-20" />
+        <FloatingBubble className="bg-orange-200 w-96 h-96 -bottom-20 -left-20" delay={2} />
+
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <h1 className="text-5xl md:text-7xl font-serif text-purple-950 leading-[1.1] mb-8">
+              Mejora tu salud con un enfoque <br />
+              <span className="italic text-purple-600 font-normal">respetuoso y flexible</span>
+            </h1>
+            <p className="text-lg md:text-xl text-slate-600 mb-10 leading-relaxed max-w-lg">
+              Acompañamiento integral para quienes desean mejorar su energía, digestión y la relación con la comida sin restricciones extremas.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-5">
+              <button
+                onClick={() => document.getElementById('reserva')?.scrollIntoView({ behavior: 'smooth' })}
+                className="bg-purple-600 text-white px-10 py-5 rounded-2xl font-bold shadow-xl shadow-purple-200 hover:bg-purple-700 transition-all flex items-center justify-center gap-3 group"
+              >
+                Quiero agendar
+                <motion.div animate={{ x: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </motion.div>
+              </button>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1 }}
+            className="relative flex justify-center"
+          >
+            <div className="relative w-full max-w-md aspect-[3/4] bg-orange-50 rounded-[80px] overflow-hidden shadow-2xl border-[12px] border-white ring-1 ring-purple-100">
+              <Image src={HERO_IMG} alt="Nutricionista" fill className="object-cover opacity-90" sizes="(max-width: 768px) 100vw, 448px" />
+              <div className="absolute inset-0 bg-gradient-to-t from-purple-900/40 via-transparent to-transparent" />
+            </div>
+
+            <motion.div
+              animate={{ y: [0, -15, 0] }}
+              transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -bottom-8 -right-4 md:-right-8 bg-white p-6 rounded-[32px] shadow-2xl border border-purple-50 max-w-[240px]"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
+                  <HeartIcon />
+                </div>
+                <span className="text-sm font-bold text-purple-950 leading-tight">Hábitos sostenibles</span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-normal font-medium">Fomentamos una relación sana con el cuerpo y la alimentación.</p>
+            </motion.div>
+          </motion.div>
+        </div>
+      </header>
+
+      {/* --- Dirigido a --- */}
+      <section id="dirigido-a" className="py-32 px-6 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="relative">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div className="h-40 bg-purple-50 rounded-3xl overflow-hidden relative">
+                    <Image src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=400&q=80" alt="" fill className="object-cover opacity-50" sizes="200px" />
+                  </div>
+                  <div className="h-64 bg-orange-50 rounded-3xl overflow-hidden relative">
+                    <Image src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=400&q=80" alt="" fill className="object-cover opacity-50" sizes="200px" />
+                  </div>
+                </div>
+                <div className="space-y-4 pt-12">
+                  <div className="h-64 bg-purple-900 rounded-3xl overflow-hidden relative">
+                    <Image src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=400&q=80" alt="" fill className="object-cover opacity-40" sizes="200px" />
+                  </div>
+                  <div className="h-40 bg-purple-100 rounded-3xl overflow-hidden relative">
+                    <Image src="https://images.unsplash.com/photo-1466637574441-749b8f19452f?auto=format&fit=crop&w=400&q=80" alt="" fill className="object-cover opacity-50" sizes="200px" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <motion.div initial="offscreen" whileInView="onscreen" viewport={{ once: true }} variants={cardVariants}>
+              <h2 className="text-4xl font-serif text-purple-950 mb-8 tracking-tight italic">Servicios dirigidos a:</h2>
+              <div className="space-y-5">
+                {[
+                  'Mujeres adolescentes (10-19 años)',
+                  'Mujeres en etapa adulta',
+                  'Etapa de perimenopausia o menopausia',
+                  'Vegetarianos y Veganos',
+                  'Condiciones metabólicas o cardiovasculares',
+                ].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    whileHover={{ x: 10 }}
+                    className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 text-purple-900 font-medium group transition-colors hover:bg-purple-50 hover:border-purple-200"
+                  >
+                    <div className="text-purple-600 group-hover:scale-125 transition-transform"><CheckIcon /></div>
+                    {item}
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- Modalidades de Consulta --- */}
+      <section id="servicios" className="py-32 px-6 bg-[#f7f2ff]">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-5xl font-serif text-purple-950 mb-4 tracking-tight italic">Modalidades de Consulta</h2>
+            <p className="text-slate-500 font-medium">Todo el apoyo que necesitas, estés donde estés.</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-10">
+            <motion.div whileHover={{ y: -10 }} className="bg-white p-10 md:p-14 rounded-[50px] shadow-xl border border-purple-100 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-[100px] -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+              <div className="relative z-10">
+                <span className="inline-block px-4 py-1 bg-orange-100 text-orange-700 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">Distancia no es barrera</span>
+                <h3 className="text-3xl font-serif text-purple-950 mb-6">Consulta Online</h3>
+                <ul className="space-y-4 mb-10">
+                  {['Consulta 1 hora o más', 'Evaluación psicosocial y hábitos', 'Plan nutricional personalizado', 'Material educativo digital', 'Seguimiento vía online'].map((li, i) => (
+                    <li key={i} className="flex items-start gap-3 text-slate-600 text-sm italic">
+                      <div className="mt-1 text-purple-400"><CheckIcon /></div>
+                      {li}
+                    </li>
+                  ))}
+                </ul>
+                <button className="w-full py-4 rounded-2xl bg-purple-50 text-purple-900 font-bold hover:bg-purple-100 transition-all">Ver detalles</button>
+              </div>
+            </motion.div>
+
+            <motion.div whileHover={{ y: -10 }} className="bg-purple-900 p-10 md:p-14 rounded-[50px] shadow-xl text-white relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-800 rounded-bl-[100px] -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+              <div className="relative z-10">
+                <span className="inline-block px-4 py-1 bg-purple-800 text-purple-200 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">Atención Local</span>
+                <h3 className="text-3xl font-serif text-white mb-6">Consulta Presencial</h3>
+                <ul className="space-y-4 mb-10">
+                  {['Consulta 1 hora o más', 'Evaluación de estilo de vida', 'Medición antropométrica (Opcional)', 'Informe antropométrico detallado', 'Material físico y digital'].map((li, i) => (
+                    <li key={i} className="flex items-start gap-3 text-purple-100 text-sm italic">
+                      <div className="mt-1 text-orange-400"><CheckIcon /></div>
+                      {li}
+                    </li>
+                  ))}
+                </ul>
+                <button className="w-full py-4 rounded-2xl bg-white/10 text-white font-bold hover:bg-white/20 border border-white/20 transition-all">Ver disponibilidad</button>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- Recetario --- */}
+      <section id="recetas" className="py-32 px-6 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+            <div>
+              <h2 className="text-4xl font-serif text-purple-950 mb-4 tracking-tight">Recetario <span className="italic text-purple-600">Saludable</span></h2>
+              <p className="text-slate-500 font-medium">Ideas ricas, fáciles y nutritivas para tu día a día.</p>
+            </div>
+            <div className="flex gap-2 p-1.5 bg-purple-50 rounded-2xl overflow-x-auto no-scrollbar">
+              {['Todas', 'Desayunos', 'Almuerzos', 'Snacks'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeCategory === cat ? 'bg-purple-600 text-white shadow-lg' : 'text-purple-400 hover:text-purple-600'}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <AnimatePresence mode="popLayout">
+              {filteredRecipes.map((recipe) => (
+                <motion.div
+                  key={recipe.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  whileHover={{ y: -10 }}
+                  className="group relative aspect-[9/16] rounded-[40px] overflow-hidden shadow-xl cursor-pointer"
+                >
+                  <Image src={recipe.img} alt={recipe.title} fill className="object-cover transition-transform duration-700 group-hover:scale-110" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-purple-950/90 via-purple-900/20 to-transparent" />
+
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
+                      <PlayIcon />
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 p-8 w-full">
+                    <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md text-[10px] font-bold text-white rounded-lg mb-3 uppercase tracking-widest">{recipe.category}</span>
+                    <h4 className="text-xl font-bold text-white leading-tight mb-2">{recipe.title}</h4>
+                    <p className="text-white/60 text-xs font-medium flex items-center gap-2">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      {recipe.time}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          <div className="mt-16 text-center">
+            <a
+              href="https://www.instagram.com/nta.micabrera/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-slate-50 text-purple-900 font-bold border border-slate-200 hover:bg-purple-50 transition-all group"
+            >
+              Ver más recetas en Instagram
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="group-hover:translate-x-1 transition-transform"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* --- Contacto / Consulta Rápida --- */}
+      <section id="contacto" className="py-24 px-6 bg-gradient-to-br from-purple-50 to-orange-50 overflow-hidden relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-purple-200/20 blur-[120px] rounded-full" />
+
+        <div className="max-w-4xl mx-auto relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white rounded-[50px] p-10 md:p-16 shadow-2xl border border-white flex flex-col md:flex-row items-center gap-12"
+          >
+            <div className="flex-1 text-center md:text-left">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-100 text-orange-700 rounded-full text-[11px] font-black uppercase tracking-[2px] mb-6">
+                <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                Atención Directa
+              </span>
+              <h2 className="text-4xl font-serif text-purple-950 mb-6 leading-tight">
+                ¿Aún tienes dudas? <br />
+                <span className="italic text-purple-600">Hablemos hoy</span>
+              </h2>
+              <p className="text-slate-600 mb-8 leading-relaxed italic">
+                Es normal sentirse inseguro al empezar algo nuevo. Cuéntame brevemente qué buscas y te orientaré sobre cuál es la mejor modalidad para ti.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                <a
+                  href="#"
+                  className="inline-flex items-center justify-center gap-3 bg-[#25D366] text-white px-10 py-5 rounded-2xl font-bold shadow-xl shadow-green-100 hover:scale-105 transition-all"
+                >
+                  <WhatsAppIcon />
+                  Consultar por WhatsApp
+                </a>
+              </div>
+            </div>
+
+            <div className="w-48 h-48 md:w-64 md:h-64 relative shrink-0">
+              <div className="absolute inset-0 bg-purple-100 rounded-[40px] rotate-6 group-hover:rotate-12 transition-transform" />
+              <div className="absolute inset-0 bg-white border-4 border-white shadow-xl rounded-[40px] overflow-hidden -rotate-3 group-hover:-rotate-6 transition-transform">
+                <Image src={HERO_IMG} alt="Mica Cabrera Nutricionista" fill className="object-cover" sizes="256px" />
+              </div>
+              <div className="absolute -bottom-4 -left-4 bg-white p-4 rounded-2xl shadow-lg border border-purple-50 animate-bounce">
+                <div className="text-purple-600 font-bold text-xs uppercase tracking-widest leading-none">Respuesta rápida</div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* --- Sección de Reserva --- */}
+      <section id="reserva" className="py-32 px-6">
+        <div className="max-w-4xl mx-auto bg-white rounded-[60px] shadow-2xl overflow-hidden border border-purple-50">
+          <div className="p-8 md:p-16 text-center">
+            <h2 className="text-4xl font-serif text-purple-950 mb-6 tracking-tight italic">Reserva tu primera sesión</h2>
+            <p className="text-slate-500 mb-12 max-w-lg mx-auto leading-relaxed">Da el primer paso hacia una salud digestiva y hormonal equilibrada con mi acompañamiento profesional.</p>
+
+            <AnimatePresence mode="wait">
+              {bookingStep === 1 ? (
+                <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <div className="grid grid-cols-7 gap-2 max-w-sm mx-auto mb-12">
+                    {Array.from({ length: 28 }).map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedDate(i + 1)}
+                        className={`aspect-square rounded-2xl flex items-center justify-center font-bold text-sm transition-all ${selectedDate === i + 1 ? 'bg-purple-600 text-white shadow-xl scale-110' : 'hover:bg-purple-50 text-slate-400'}`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    disabled={!selectedDate}
+                    onClick={() => setBookingStep(2)}
+                    className="bg-purple-900 text-white px-12 py-5 rounded-2xl font-bold disabled:opacity-30 shadow-xl"
+                  >
+                    Siguiente: Elegir horario
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div key="step2" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                  <div className="flex justify-center flex-wrap gap-4 mb-12">
+                    {['09:00', '12:00', '15:30', '18:00'].map((t) => (
+                      <button key={t} className="px-6 py-4 border-2 border-purple-50 rounded-2xl font-bold text-purple-900 hover:border-purple-600 transition-all">
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-4 justify-center">
+                    <button onClick={() => setBookingStep(1)} className="px-8 py-5 text-purple-900 font-bold">Volver</button>
+                    <button
+                      onClick={() => {
+                        alert('¡Consulta solicitada exitosamente!');
+                        setBookingStep(1);
+                      }}
+                      className="bg-purple-600 text-white px-10 py-5 rounded-2xl font-bold shadow-xl"
+                    >
+                      Confirmar Reserva
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </section>
+
+      {/* --- Footer --- */}
+      <footer className="bg-white pt-24 pb-12 px-6 border-t border-purple-50">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="flex flex-col items-center gap-6 mb-12">
+            <div className="bg-purple-950 p-3 rounded-2xl text-white">
+              <LeafIcon />
+            </div>
+            <h4 className="text-3xl font-serif text-purple-950">Nutrición Mica Cabrera</h4>
+            <div className="flex gap-10 text-sm font-bold text-purple-600/60 uppercase tracking-widest">
+              <a href="https://www.instagram.com/nta.micabrera/" target="_blank" rel="noopener noreferrer" className="hover:text-purple-900 transition-colors">Instagram</a>
+              <span className="hover:text-purple-900 transition-colors cursor-pointer">WhatsApp</span>
+              <span className="hover:text-purple-900 transition-colors cursor-pointer">Email</span>
+            </div>
+          </div>
+          <p className="text-xs text-slate-300 font-medium tracking-wide italic">&quot;Por una nutrición más humana, inclusiva y libre de juicios&quot;</p>
+          <div className="w-16 h-px bg-slate-100 mx-auto my-8" />
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">© 2024 Mica Cabrera • Hecho con amor para mi hermana</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
