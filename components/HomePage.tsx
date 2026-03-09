@@ -2,13 +2,10 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Iconos SVG personalizados
-const LeafIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8a7 7 0 0 1-7 7c-1.18 0-2.34-.38-3.3-1.1Z"/><path d="M14 17v5"/><path d="M10 20.95A7 7 0 0 1 4 14c0-3.82 1-5.66 2.67-7.67"/><path d="M6.7 13.8a2.12 2.12 0 0 0 2.5 2.5"/></svg>
-);
-
 const HeartIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
 );
@@ -21,9 +18,6 @@ const PlayIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-white"><path d="m7 4 12 8-12 8V4z"/></svg>
 );
 
-const WhatsAppIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-7.6 8.38 8.38 0 0 1 3.8.9L22 4Z"/></svg>
-);
 
 const FloatingBubble = ({ className, delay = 0 }: { className: string; delay?: number }) => (
   <motion.div
@@ -41,7 +35,7 @@ const FloatingBubble = ({ className, delay = 0 }: { className: string; delay?: n
   />
 );
 
-const HERO_IMG = 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=800&q=80';
+const HERO_IMG = '/mica.jpg';
 
 export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -73,8 +67,8 @@ export default function HomePage() {
       <nav className="fixed w-full z-50 bg-white/70 backdrop-blur-lg border-b border-purple-100">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-purple-600 p-1.5 rounded-lg text-white">
-              <LeafIcon />
+            <div className="p-1.5 rounded-lg flex items-center justify-center">
+              <Image src="/svg/isotipo-1.svg" alt="Mica Cabrera" width={32} height={32} />
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-serif font-bold text-purple-950 leading-none">Mica Cabrera</span>
@@ -197,18 +191,18 @@ export default function HomePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">
                   <div className="h-40 bg-purple-50 rounded-3xl overflow-hidden relative">
-                    <Image src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=400&q=80" alt="" fill className="object-cover opacity-50" sizes="200px" />
+                    <Image src="https://images.unsplash.com/photo-1765572144519-1dc1e6e07bc9?auto=format&fit=crop&w=400&q=80" alt="Mujeres adolescentes" fill className="object-cover opacity-50" sizes="200px" />
                   </div>
                   <div className="h-64 bg-orange-50 rounded-3xl overflow-hidden relative">
-                    <Image src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=400&q=80" alt="" fill className="object-cover opacity-50" sizes="200px" />
+                    <Image src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=400&q=80" alt="Alimentación saludable" fill className="object-cover opacity-50" sizes="200px" />
                   </div>
                 </div>
                 <div className="space-y-4 pt-12">
                   <div className="h-64 bg-purple-900 rounded-3xl overflow-hidden relative">
-                    <Image src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=400&q=80" alt="" fill className="object-cover opacity-40" sizes="200px" />
+                    <Image src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=400&q=80" alt="Bienestar y estilo de vida" fill className="object-cover opacity-40" sizes="200px" />
                   </div>
                   <div className="h-40 bg-purple-100 rounded-3xl overflow-hidden relative">
-                    <Image src="https://images.unsplash.com/photo-1466637574441-749b8f19452f?auto=format&fit=crop&w=400&q=80" alt="" fill className="object-cover opacity-50" sizes="200px" />
+                    <Image src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=400&q=80" alt="Vegetarianos y veganos" fill className="object-cover opacity-50" sizes="200px" />
                   </div>
                 </div>
               </div>
@@ -383,7 +377,7 @@ export default function HomePage() {
                   href="#"
                   className="inline-flex items-center justify-center gap-3 bg-[#25D366] text-white px-10 py-5 rounded-2xl font-bold shadow-xl shadow-green-100 hover:scale-105 transition-all"
                 >
-                  <WhatsAppIcon />
+                  <Icon icon="simple-icons:whatsapp" width={24} height={24} />
                   Consultar por WhatsApp
                 </a>
               </div>
@@ -463,8 +457,8 @@ export default function HomePage() {
       <footer className="bg-white pt-24 pb-12 px-6 border-t border-purple-50">
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex flex-col items-center gap-6 mb-12">
-            <div className="bg-purple-950 p-3 rounded-2xl text-white">
-              <LeafIcon />
+            <div className="p-3 rounded-2xl flex items-center justify-center">
+              <Image src="/svg/isotipo-1.svg" alt="Mica Cabrera" width={48} height={48} />
             </div>
             <h4 className="text-3xl font-serif text-purple-950">Nutrición Mica Cabrera</h4>
             <div className="flex gap-10 text-sm font-bold text-purple-600/60 uppercase tracking-widest">
