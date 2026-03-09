@@ -35,7 +35,8 @@ const FloatingBubble = ({ className, delay = 0 }: { className: string; delay?: n
   />
 );
 
-const HERO_IMG = '/mica.jpg';
+const HERO_IMG = '/mica-2.jpeg';
+const CONTACT_IMG = '/mica-2.jpeg';
 
 export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -386,7 +387,7 @@ export default function HomePage() {
             <div className="w-48 h-48 md:w-64 md:h-64 relative shrink-0">
               <div className="absolute inset-0 bg-purple-100 rounded-[40px] rotate-6 group-hover:rotate-12 transition-transform" />
               <div className="absolute inset-0 bg-white border-4 border-white shadow-xl rounded-[40px] overflow-hidden -rotate-3 group-hover:-rotate-6 transition-transform">
-                <Image src={HERO_IMG} alt="Mica Cabrera Nutricionista" fill className="object-cover" sizes="256px" />
+                <Image src={CONTACT_IMG} alt="Mica Cabrera Nutricionista" fill className="object-cover" sizes="256px" />
               </div>
               <div className="absolute -bottom-4 -left-4 bg-white p-4 rounded-2xl shadow-lg border border-purple-50 animate-bounce">
                 <div className="text-purple-600 font-bold text-xs uppercase tracking-widest leading-none">Respuesta rápida</div>
