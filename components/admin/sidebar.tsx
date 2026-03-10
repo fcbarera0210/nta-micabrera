@@ -23,6 +23,7 @@ const navItems = [
   { label: "Pacientes", href: "/admin/pacientes", icon: "solar:users-group-rounded-bold" },
   { label: "Reservas", href: "/admin/reservas", icon: "solar:calendar-bold" },
   { label: "Disponibilidad", href: "/admin/disponibilidad", icon: "solar:clock-circle-bold" },
+  { label: "Servicios", href: "/admin/servicios", icon: "solar:tag-bold" },
   { label: "Recetas", href: "/admin/recetas", icon: "solar:chef-hat-heart-bold" },
   { label: "Métricas", href: "/admin/metricas", icon: "solar:chart-2-bold" },
   { label: "Configuración", href: "/admin/configuracion", icon: "solar:settings-bold" },

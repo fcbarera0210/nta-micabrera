@@ -1,9 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { format, startOfDay, isBefore } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { getActiveServices, getAvailableSlots, createReservation } from '@/app/actions/booking';
+import type { Modality } from '@/app/actions/booking';
+import type { TimeSlot } from '@/lib/availability/slots';
+import type { Service } from '@/lib/db/schema';
 
 // Iconos SVG personalizados
 const HeartIcon = () => (
@@ -41,15 +47,66 @@ const CONTACT_IMG = '/mica-2.jpeg';
 export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
-  const [selectedDate, setSelectedDate] = useState<number | null>(null);
-  const [bookingMonth, setBookingMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [activeCategory, setActiveCategory] = useState('Todas');
+
+  // Reserva: paso 1 — modalidad y servicio
+  const [bookingModality, setBookingModality] = useState<Modality | null>(null);
+  const [bookingService, setBookingService] = useState<Service | null>(null);
+  const [servicesList, setServicesList] = useState<Service[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(true);
+
+  // Reserva: paso 2 — fecha
+  const [bookingMonth, setBookingMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [calendarSlideDirection, setCalendarSlideDirection] = useState<'left' | 'right'>('left');
+
+  // Reserva: paso 3 — horario
+  const [bookingSlots, setBookingSlots] = useState<TimeSlot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+
+  // Reserva: paso 4 — datos cliente
+  const [patientName, setPatientName] = useState('');
+  const [patientEmail, setPatientEmail] = useState('');
+  const [patientNotes, setPatientNotes] = useState('');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const daysInBookingMonth = new Date(bookingMonth.getFullYear(), bookingMonth.getMonth() + 1, 0).getDate();
   const firstDayOfWeek = (new Date(bookingMonth.getFullYear(), bookingMonth.getMonth(), 1).getDay() + 6) % 7; // 0 = Lunes
 
-  const [calendarSlideDirection, setCalendarSlideDirection] = useState<'left' | 'right'>('left');
+  useEffect(() => {
+    getActiveServices().then((list) => {
+      setServicesList(list);
+      setServicesLoading(false);
+    });
+  }, []);
+
+  const bookingDateStr = selectedDate
+    ? format(new Date(bookingMonth.getFullYear(), bookingMonth.getMonth(), selectedDate), 'yyyy-MM-dd')
+    : null;
+
+  useEffect(() => {
+    if (bookingStep !== 3 || !bookingDateStr || !bookingService || !bookingModality) return;
+    setLoadingSlots(true);
+    getAvailableSlots(bookingDateStr, bookingModality, bookingService.id)
+      .then((slots) => {
+        const now = new Date();
+        const today = format(now, 'yyyy-MM-dd');
+        const availableOnly = slots.filter((s) => s.available);
+        const filtered = bookingDateStr === today
+          ? availableOnly.filter((s) => {
+              const [h, m] = s.startTime.split(':').map(Number);
+              const slotMins = h * 60 + m;
+              const nowMins = now.getHours() * 60 + now.getMinutes();
+              return slotMins > nowMins;
+            })
+          : availableOnly;
+        setBookingSlots(filtered);
+      })
+      .finally(() => setLoadingSlots(false));
+  }, [bookingStep, bookingDateStr, bookingService?.id, bookingModality]);
 
   const goToPrevMonth = () => {
     setCalendarSlideDirection('right');
@@ -69,6 +126,54 @@ export default function HomePage() {
     else if (currentMonth.getTime() > bookingMonth.getTime()) setCalendarSlideDirection('left');
     setBookingMonth(currentMonth);
     setSelectedDate(null);
+  };
+
+  const isDateDisabled = (day: number) => {
+    const d = new Date(bookingMonth.getFullYear(), bookingMonth.getMonth(), day);
+    return isBefore(startOfDay(d), startOfDay(new Date()));
+  };
+
+  const resetBooking = () => {
+    setBookingStep(1);
+    setBookingModality(null);
+    setBookingService(null);
+    setSelectedDate(null);
+    setSelectedSlot(null);
+    setPatientName('');
+    setPatientEmail('');
+    setPatientNotes('');
+    setSubmitStatus('idle');
+    setSubmitError(null);
+  };
+
+  const handleConfirmReservation = async () => {
+    if (!bookingService || !bookingDateStr || !selectedSlot) return;
+    if (!patientName.trim() || !patientEmail.trim()) {
+      setSubmitError('Nombre y correo son obligatorios.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patientEmail)) {
+      setSubmitError('Ingresa un correo electrónico válido.');
+      return;
+    }
+    setSubmitStatus('loading');
+    setSubmitError(null);
+    const result = await createReservation({
+      serviceId: bookingService.id,
+      modality: bookingModality!,
+      date: bookingDateStr,
+      startTime: selectedSlot.startTime,
+      endTime: selectedSlot.endTime,
+      patientName: patientName.trim(),
+      patientEmail: patientEmail.trim(),
+      notes: patientNotes.trim() || undefined,
+    });
+    if (result.success) {
+      setSubmitStatus('success');
+    } else {
+      setSubmitStatus('error');
+      setSubmitError(result.error ?? 'Error al crear la reserva.');
+    }
   };
 
   const calendarSlideVariants = {
@@ -514,106 +619,211 @@ export default function HomePage() {
             <h2 className="text-4xl font-serif text-purple-950 mb-6 tracking-tight italic">Reserva tu primera sesión</h2>
             <p className="text-slate-500 mb-12 max-w-lg mx-auto leading-relaxed">Da el primer paso hacia una salud digestiva y hormonal equilibrada con mi acompañamiento profesional.</p>
 
-            <AnimatePresence mode="wait">
-              {bookingStep === 1 ? (
-                <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <button
-                      type="button"
-                      onClick={goToPrevMonth}
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 hover:bg-purple-100 transition-colors"
-                      aria-label="Mes anterior"
-                    >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={goToToday}
-                      className="px-5 py-2.5 rounded-xl text-sm font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 transition-colors"
-                    >
-                      Hoy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={goToNextMonth}
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 hover:bg-purple-100 transition-colors"
-                      aria-label="Mes siguiente"
-                    >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    </button>
-                  </div>
-                  <div className="min-w-[180px] overflow-hidden mb-12">
-                    <AnimatePresence mode="wait" custom={calendarSlideDirection}>
-                      <motion.div
-                        key={`${bookingMonth.getFullYear()}-${bookingMonth.getMonth()}`}
-                        custom={calendarSlideDirection}
-                        variants={calendarSlideVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="flex flex-col items-center"
+            {submitStatus === 'success' ? (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <p className="text-lg font-semibold text-purple-900 mb-4">Reserva solicitada correctamente.</p>
+                <p className="text-slate-600 mb-8">Te hemos registrado para la fecha y horario elegidos. Si necesitas cambios, contáctanos.</p>
+                <button
+                  type="button"
+                  onClick={resetBooking}
+                  className="bg-purple-600 text-white px-10 py-5 rounded-2xl font-bold shadow-xl hover:bg-purple-700 transition-colors"
+                >
+                  Hacer otra reserva
+                </button>
+              </motion.div>
+            ) : (
+              <AnimatePresence mode="wait">
+                {bookingStep === 1 && (
+                  <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-left max-w-md mx-auto">
+                    <p className="text-sm font-bold text-purple-900 mb-2">Modalidad</p>
+                    <div className="flex gap-3 mb-6">
+                      <button
+                        type="button"
+                        onClick={() => setBookingModality('presencial')}
+                        className={`flex-1 py-4 rounded-2xl font-bold transition-all border-2 ${bookingModality === 'presencial' ? 'bg-purple-900 text-white border-purple-900' : 'border-purple-100 text-purple-900 hover:border-purple-300'}`}
                       >
-                        <h3 className="text-xl font-serif font-bold text-purple-950 mb-6">
-                          {monthNames[bookingMonth.getMonth()]} {bookingMonth.getFullYear()}
-                        </h3>
-                        <div className="grid grid-cols-7 gap-2 max-w-sm w-full">
-                          {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
-                            <div key={d} className="aspect-square rounded-2xl flex items-center justify-center font-bold text-xs text-slate-400">
-                              {d}
-                            </div>
-                          ))}
-                          {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                            <div key={`empty-${i}`} className="aspect-square" />
-                          ))}
-                          {Array.from({ length: daysInBookingMonth }).map((_, i) => {
-                            const day = i + 1;
-                            return (
-                              <button
-                                key={day}
-                                onClick={() => setSelectedDate(day)}
-                                className={`aspect-square rounded-2xl flex items-center justify-center font-bold text-sm transition-all ${selectedDate === day ? 'bg-purple-600 text-white shadow-xl scale-110' : 'hover:bg-purple-50 text-slate-400'}`}
-                              >
-                                {day}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-                  <button
-                    disabled={!selectedDate}
-                    onClick={() => setBookingStep(2)}
-                    className="bg-purple-900 text-white px-12 py-5 rounded-2xl font-bold disabled:opacity-30 shadow-xl"
-                  >
-                    Siguiente: Elegir horario
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.div key="step2" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                  <div className="flex justify-center flex-wrap gap-4 mb-12">
-                    {['09:00', '12:00', '15:30', '18:00'].map((t) => (
-                      <button key={t} className="px-6 py-4 border-2 border-purple-50 rounded-2xl font-bold text-purple-900 hover:border-purple-600 transition-all">
-                        {t}
+                        Presencial
                       </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-4 justify-center">
-                    <button onClick={() => setBookingStep(1)} className="px-8 py-5 text-purple-900 font-bold">Volver</button>
+                      <button
+                        type="button"
+                        onClick={() => setBookingModality('online')}
+                        className={`flex-1 py-4 rounded-2xl font-bold transition-all border-2 ${bookingModality === 'online' ? 'bg-purple-900 text-white border-purple-900' : 'border-purple-100 text-purple-900 hover:border-purple-300'}`}
+                      >
+                        Online
+                      </button>
+                    </div>
+                    <p className="text-sm font-bold text-purple-900 mb-2">Servicio</p>
+                    {servicesLoading ? (
+                      <p className="text-slate-500 text-sm mb-6">Cargando servicios…</p>
+                    ) : servicesList.length === 0 ? (
+                      <p className="text-slate-500 text-sm mb-6">No hay servicios disponibles en este momento. Vuelve a intentar más tarde.</p>
+                    ) : (
+                      <div className="flex flex-col gap-2 mb-8">
+                        {servicesList.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setBookingService(s)}
+                            className={`py-3 px-4 rounded-2xl text-left font-medium transition-all border-2 ${bookingService?.id === s.id ? 'bg-purple-100 border-purple-600 text-purple-900' : 'border-purple-50 text-slate-600 hover:border-purple-200'}`}
+                          >
+                            {s.name} ({s.durationMinutes} min)
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <button
-                      onClick={() => {
-                        alert('¡Consulta solicitada exitosamente!');
-                        setBookingStep(1);
-                      }}
-                      className="bg-purple-600 text-white px-10 py-5 rounded-2xl font-bold shadow-xl"
+                      disabled={!bookingModality || !bookingService}
+                      onClick={() => setBookingStep(2)}
+                      className="w-full bg-purple-900 text-white px-12 py-5 rounded-2xl font-bold disabled:opacity-30 shadow-xl"
                     >
-                      Confirmar Reserva
+                      Siguiente: Elegir fecha
                     </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </motion.div>
+                )}
+
+                {bookingStep === 2 && (
+                  <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <button type="button" onClick={goToPrevMonth} className="w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 hover:bg-purple-100 transition-colors" aria-label="Mes anterior">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                      </button>
+                      <button type="button" onClick={goToToday} className="px-5 py-2.5 rounded-xl text-sm font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 transition-colors">Hoy</button>
+                      <button type="button" onClick={goToNextMonth} className="w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 hover:bg-purple-100 transition-colors" aria-label="Mes siguiente">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      </button>
+                    </div>
+                    <div className="min-w-[180px] overflow-hidden mb-12">
+                      <AnimatePresence mode="wait" custom={calendarSlideDirection}>
+                        <motion.div
+                          key={`${bookingMonth.getFullYear()}-${bookingMonth.getMonth()}`}
+                          custom={calendarSlideDirection}
+                          variants={calendarSlideVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          transition={{ duration: 0.3, ease: 'easeInOut' }}
+                          className="flex flex-col items-center"
+                        >
+                          <h3 className="text-xl font-serif font-bold text-purple-950 mb-6">{monthNames[bookingMonth.getMonth()]} {bookingMonth.getFullYear()}</h3>
+                          <div className="grid grid-cols-7 gap-2 max-w-sm w-full">
+                            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
+                              <div key={d} className="aspect-square rounded-2xl flex items-center justify-center font-bold text-xs text-slate-400">{d}</div>
+                            ))}
+                            {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                              <div key={`empty-${i}`} className="aspect-square" />
+                            ))}
+                            {Array.from({ length: daysInBookingMonth }).map((_, i) => {
+                              const day = i + 1;
+                              const disabled = isDateDisabled(day);
+                              return (
+                                <button
+                                  key={day}
+                                  type="button"
+                                  disabled={disabled}
+                                  onClick={() => setSelectedDate(day)}
+                                  className={`aspect-square rounded-2xl flex items-center justify-center font-bold text-sm transition-all ${selectedDate === day ? 'bg-purple-600 text-white shadow-xl scale-110' : disabled ? 'text-slate-200 cursor-not-allowed' : 'hover:bg-purple-50 text-slate-400'}`}
+                                >
+                                  {day}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+                    <div className="flex gap-4 justify-center">
+                      <button type="button" onClick={() => setBookingStep(1)} className="px-8 py-5 text-purple-900 font-bold">Volver</button>
+                      <button
+                        disabled={!selectedDate}
+                        onClick={() => setBookingStep(3)}
+                        className="bg-purple-900 text-white px-12 py-5 rounded-2xl font-bold disabled:opacity-30 shadow-xl"
+                      >
+                        Siguiente: Elegir horario
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {bookingStep === 3 && (
+                  <motion.div key="step3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
+                    {loadingSlots ? (
+                      <p className="text-slate-500 py-8">Cargando horarios…</p>
+                    ) : bookingSlots.length === 0 ? (
+                      <p className="text-slate-500 py-8">No hay horarios disponibles para esta fecha. Elige otra.</p>
+                    ) : (
+                      <div className="flex justify-center flex-wrap gap-3 mb-8">
+                        {bookingSlots.map((slot) => (
+                          <button
+                            key={`${slot.startTime}-${slot.endTime}`}
+                            type="button"
+                            onClick={() => { setSelectedSlot(slot); setBookingStep(4); }}
+                            className="px-6 py-4 border-2 border-purple-50 rounded-2xl font-bold text-purple-900 hover:border-purple-600 transition-all"
+                          >
+                            {slot.startTime}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <button type="button" onClick={() => { setSelectedSlot(null); setBookingStep(2); }} className="px-8 py-5 text-purple-900 font-bold">Volver</button>
+                  </motion.div>
+                )}
+
+                {bookingStep === 4 && selectedSlot && bookingDateStr && bookingService && (
+                  <motion.div key="step4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-left max-w-md mx-auto">
+                    <div className="bg-purple-50 rounded-2xl p-4 mb-6 text-sm text-purple-900">
+                      <p><strong>Fecha:</strong> {format(new Date(bookingDateStr + 'T12:00:00'), "EEEE d 'de' MMMM yyyy", { locale: es })}</p>
+                      <p><strong>Horario:</strong> {selectedSlot.startTime} – {selectedSlot.endTime}</p>
+                      <p><strong>Servicio:</strong> {bookingService.name}</p>
+                      <p><strong>Modalidad:</strong> {bookingModality === 'presencial' ? 'Presencial' : 'Online'}</p>
+                    </div>
+                    <div className="space-y-4 mb-6">
+                      <div>
+                        <label className="block text-sm font-bold text-purple-900 mb-1">Nombre completo *</label>
+                        <input
+                          type="text"
+                          value={patientName}
+                          onChange={(e) => setPatientName(e.target.value)}
+                          placeholder="Tu nombre"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-purple-100 focus:border-purple-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-purple-900 mb-1">Correo electrónico *</label>
+                        <input
+                          type="email"
+                          value={patientEmail}
+                          onChange={(e) => setPatientEmail(e.target.value)}
+                          placeholder="tu@email.com"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-purple-100 focus:border-purple-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-purple-900 mb-1">Notas (opcional)</label>
+                        <input
+                          type="text"
+                          value={patientNotes}
+                          onChange={(e) => setPatientNotes(e.target.value)}
+                          placeholder="Comentarios o consultas"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-purple-100 focus:border-purple-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                    {submitError && <p className="text-red-600 text-sm mb-4">{submitError}</p>}
+                    <div className="flex gap-4 justify-center">
+                      <button type="button" onClick={() => setBookingStep(3)} className="px-8 py-5 text-purple-900 font-bold">Volver</button>
+                      <button
+                        type="button"
+                        disabled={submitStatus === 'loading'}
+                        onClick={handleConfirmReservation}
+                        className="bg-purple-600 text-white px-10 py-5 rounded-2xl font-bold shadow-xl disabled:opacity-70"
+                      >
+                        {submitStatus === 'loading' ? 'Enviando…' : 'Confirmar reserva'}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
           </div>
         </div>
       </section>
