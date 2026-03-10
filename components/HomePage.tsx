@@ -42,7 +42,46 @@ export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [bookingMonth, setBookingMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [activeCategory, setActiveCategory] = useState('Todas');
+
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const daysInBookingMonth = new Date(bookingMonth.getFullYear(), bookingMonth.getMonth() + 1, 0).getDate();
+  const firstDayOfWeek = (new Date(bookingMonth.getFullYear(), bookingMonth.getMonth(), 1).getDay() + 6) % 7; // 0 = Lunes
+
+  const [calendarSlideDirection, setCalendarSlideDirection] = useState<'left' | 'right'>('left');
+
+  const goToPrevMonth = () => {
+    setCalendarSlideDirection('right');
+    setBookingMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    setSelectedDate(null);
+  };
+  const goToNextMonth = () => {
+    setCalendarSlideDirection('left');
+    setBookingMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+    setSelectedDate(null);
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    if (currentMonth.getTime() < bookingMonth.getTime()) setCalendarSlideDirection('right');
+    else if (currentMonth.getTime() > bookingMonth.getTime()) setCalendarSlideDirection('left');
+    setBookingMonth(currentMonth);
+    setSelectedDate(null);
+  };
+
+  const calendarSlideVariants = {
+    enter: (direction: 'left' | 'right') => ({
+      x: direction === 'left' ? 60 : -60,
+      opacity: 0,
+    }),
+    center: { x: 0, opacity: 1 },
+    exit: (direction: 'left' | 'right') => ({
+      x: direction === 'left' ? -60 : 60,
+      opacity: 0,
+    }),
+  };
 
   const cardVariants = {
     offscreen: { y: 30, opacity: 0 },
@@ -78,7 +117,7 @@ export default function HomePage() {
           </div>
 
           <div className="hidden md:flex gap-8 text-sm font-semibold text-purple-950/70">
-            {['Inicio', 'Dirigido a', 'Servicios', 'Recetas', 'Contacto', 'Reserva'].map((item) => (
+            {['Inicio', 'Sobre mí', 'Dirigido a', 'Servicios', 'Recetas', 'Contacto', 'Reserva'].map((item) => (
               <button
                 key={item}
                 onClick={() => {
@@ -118,8 +157,25 @@ export default function HomePage() {
             <button onClick={() => setIsMenuOpen(false)} className="absolute top-8 right-8 p-2" aria-label="Cerrar menú">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
-            {['Inicio', 'Dirigido a', 'Servicios', 'Recetas', 'Contacto', 'Agendar'].map((item) => (
-              <button key={item} onClick={() => setIsMenuOpen(false)} className="text-4xl font-serif">{item}</button>
+            {[
+              { label: 'Inicio', id: 'inicio' },
+              { label: 'Sobre mí', id: 'sobre-mí' },
+              { label: 'Dirigido a', id: 'dirigido-a' },
+              { label: 'Servicios', id: 'servicios' },
+              { label: 'Recetas', id: 'recetas' },
+              { label: 'Contacto', id: 'contacto' },
+              { label: 'Agendar', id: 'reserva' },
+            ].map(({ label, id }) => (
+              <button
+                key={id}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="text-4xl font-serif"
+              >
+                {label}
+              </button>
             ))}
           </motion.div>
         )}
@@ -137,18 +193,18 @@ export default function HomePage() {
             transition={{ duration: 0.8 }}
           >
             <h1 className="text-5xl md:text-7xl font-serif text-purple-950 leading-[1.1] mb-8">
-              Mejora tu salud con un enfoque <br />
-              <span className="italic text-purple-600 font-normal">respetuoso y flexible</span>
+              Nutricionista deportiva <br />
+              <span className="italic text-purple-600 font-normal">y salud femenina</span>
             </h1>
             <p className="text-lg md:text-xl text-slate-600 mb-10 leading-relaxed max-w-lg">
-              Acompañamiento integral para quienes desean mejorar su energía, digestión y la relación con la comida sin restricciones extremas.
+              Ayudo a mujeres a mejorar su salud, energía y rendimiento deportivo a través de una alimentación consciente y hábitos sostenibles.
             </p>
             <div className="flex flex-col sm:flex-row gap-5">
               <button
                 onClick={() => document.getElementById('reserva')?.scrollIntoView({ behavior: 'smooth' })}
                 className="bg-purple-600 text-white px-10 py-5 rounded-2xl font-bold shadow-xl shadow-purple-200 hover:bg-purple-700 transition-all flex items-center justify-center gap-3 group"
               >
-                Quiero agendar
+                Agendar consulta
                 <motion.div animate={{ x: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </motion.div>
@@ -183,6 +239,50 @@ export default function HomePage() {
           </motion.div>
         </div>
       </header>
+
+      {/* --- Sobre mí --- */}
+      <section id="sobre-mí" className="py-24 md:py-32 px-6 bg-white overflow-hidden">
+        <div className="max-w-4xl mx-auto">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-3xl md:text-4xl font-serif text-purple-950 mb-8 tracking-tight italic"
+          >
+            Sobre mí
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="text-lg md:text-xl text-slate-600 leading-relaxed mb-12"
+          >
+            Soy nutricionista titulada y desde hace más de dos años acompaño a mujeres en Concepción en su proceso de mejorar su salud a través de la alimentación. Mi enfoque combina nutrición basada en evidencia, salud natural y rendimiento deportivo, buscando crear hábitos sostenibles que se adapten al estilo de vida de cada persona.
+          </motion.p>
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+            {[
+              { label: 'Nutrición femenina', icon: 'mdi:heart' },
+              { label: 'Nutrición deportiva', icon: 'mdi:dumbbell' },
+              { label: 'Hábitos y salud natural', icon: 'mdi:leaf' },
+            ].map((item, i) => (
+              <motion.div
+                key={item.label}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 + i * 0.1 }}
+                className="flex items-center gap-4 p-5 rounded-2xl bg-purple-50 border border-purple-100 text-purple-900 font-semibold hover:bg-purple-100/80 hover:border-purple-200 transition-all"
+              >
+                <div className="w-12 h-12 rounded-xl bg-white border border-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+                  <Icon icon={item.icon} width={24} height={24} />
+                </div>
+                <span className="text-base">{item.label}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* --- Dirigido a --- */}
       <section id="dirigido-a" className="py-32 px-6 bg-white overflow-hidden">
@@ -256,7 +356,12 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <button className="w-full py-4 rounded-2xl bg-purple-50 text-purple-900 font-bold hover:bg-purple-100 transition-all">Ver detalles</button>
+                <button
+                onClick={() => document.getElementById('reserva')?.scrollIntoView({ behavior: 'smooth' })}
+                className="w-full py-4 rounded-2xl bg-purple-50 text-purple-900 font-bold hover:bg-purple-100 transition-all"
+              >
+                Ver disponibilidad
+              </button>
               </div>
             </motion.div>
 
@@ -273,7 +378,12 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <button className="w-full py-4 rounded-2xl bg-white/10 text-white font-bold hover:bg-white/20 border border-white/20 transition-all">Ver disponibilidad</button>
+                <button
+                onClick={() => document.getElementById('reserva')?.scrollIntoView({ behavior: 'smooth' })}
+                className="w-full py-4 rounded-2xl bg-white/10 text-white font-bold hover:bg-white/20 border border-white/20 transition-all"
+              >
+                Ver disponibilidad
+              </button>
               </div>
             </motion.div>
           </div>
@@ -288,12 +398,12 @@ export default function HomePage() {
               <h2 className="text-4xl font-serif text-purple-950 mb-4 tracking-tight">Recetario <span className="italic text-purple-600">Saludable</span></h2>
               <p className="text-slate-500 font-medium">Ideas ricas, fáciles y nutritivas para tu día a día.</p>
             </div>
-            <div className="flex gap-2 p-1.5 bg-purple-50 rounded-2xl overflow-x-auto no-scrollbar">
+            <div className="flex flex-col md:flex-row gap-2 p-1.5 bg-purple-50 rounded-2xl md:overflow-x-auto no-scrollbar">
               {['Todas', 'Desayunos', 'Almuerzos', 'Snacks'].map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeCategory === cat ? 'bg-purple-600 text-white shadow-lg' : 'text-purple-400 hover:text-purple-600'}`}
+                  className={`w-full md:w-auto px-6 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap text-left md:text-center ${activeCategory === cat ? 'bg-purple-600 text-white shadow-lg' : 'text-purple-400 hover:text-purple-600'}`}
                 >
                   {cat}
                 </button>
@@ -407,16 +517,70 @@ export default function HomePage() {
             <AnimatePresence mode="wait">
               {bookingStep === 1 ? (
                 <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <div className="grid grid-cols-7 gap-2 max-w-sm mx-auto mb-12">
-                    {Array.from({ length: 28 }).map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setSelectedDate(i + 1)}
-                        className={`aspect-square rounded-2xl flex items-center justify-center font-bold text-sm transition-all ${selectedDate === i + 1 ? 'bg-purple-600 text-white shadow-xl scale-110' : 'hover:bg-purple-50 text-slate-400'}`}
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <button
+                      type="button"
+                      onClick={goToPrevMonth}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 hover:bg-purple-100 transition-colors"
+                      aria-label="Mes anterior"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={goToToday}
+                      className="px-5 py-2.5 rounded-xl text-sm font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 transition-colors"
+                    >
+                      Hoy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={goToNextMonth}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 hover:bg-purple-100 transition-colors"
+                      aria-label="Mes siguiente"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                  </div>
+                  <div className="min-w-[180px] overflow-hidden mb-12">
+                    <AnimatePresence mode="wait" custom={calendarSlideDirection}>
+                      <motion.div
+                        key={`${bookingMonth.getFullYear()}-${bookingMonth.getMonth()}`}
+                        custom={calendarSlideDirection}
+                        variants={calendarSlideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="flex flex-col items-center"
                       >
-                        {i + 1}
-                      </button>
-                    ))}
+                        <h3 className="text-xl font-serif font-bold text-purple-950 mb-6">
+                          {monthNames[bookingMonth.getMonth()]} {bookingMonth.getFullYear()}
+                        </h3>
+                        <div className="grid grid-cols-7 gap-2 max-w-sm w-full">
+                          {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
+                            <div key={d} className="aspect-square rounded-2xl flex items-center justify-center font-bold text-xs text-slate-400">
+                              {d}
+                            </div>
+                          ))}
+                          {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                            <div key={`empty-${i}`} className="aspect-square" />
+                          ))}
+                          {Array.from({ length: daysInBookingMonth }).map((_, i) => {
+                            const day = i + 1;
+                            return (
+                              <button
+                                key={day}
+                                onClick={() => setSelectedDate(day)}
+                                className={`aspect-square rounded-2xl flex items-center justify-center font-bold text-sm transition-all ${selectedDate === day ? 'bg-purple-600 text-white shadow-xl scale-110' : 'hover:bg-purple-50 text-slate-400'}`}
+                              >
+                                {day}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                   <button
                     disabled={!selectedDate}
@@ -470,7 +634,17 @@ export default function HomePage() {
           </div>
           <p className="text-xs text-slate-300 font-medium tracking-wide italic">&quot;Por una nutrición más humana, inclusiva y libre de juicios&quot;</p>
           <div className="w-16 h-px bg-slate-100 mx-auto my-8" />
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">© 2024 Mica Cabrera • Hecho con amor para mi hermana</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+            © 2026 Mica Cabrera • Hecho con 💜 por{' '}
+            <a
+              href="https://charlideas.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-purple-500 hover:text-purple-700 transition-colors normal-case"
+            >
+              charl!deas
+            </a>
+          </p>
         </div>
       </footer>
     </div>
