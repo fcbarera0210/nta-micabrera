@@ -15,6 +15,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { logoutAction } from "@/app/admin/actions";
+import { sileo } from "sileo";
 
 const navItems = [
   { label: "Dashboard", href: "/admin", icon: "solar:home-2-bold" },
@@ -137,20 +139,46 @@ function SidebarContent({ pathname, collapsed, onToggle, onNavigate }: SidebarCo
           })}
         </div>
       </ScrollArea>
-      {(isMobile || !collapsed) && (
-        <div className="border-t border-sidebar-border p-2">
-          <div className="rounded-lg bg-muted/50 px-3 py-2">
-            <p className="text-xs font-medium text-muted-foreground">Sesión</p>
-            <Link
-              href="/admin/login"
-              className="text-sm font-medium text-primary transition-colors duration-200 hover:underline"
-              onClick={onNavigate}
-            >
-              Iniciar sesión
-            </Link>
-          </div>
-        </div>
-      )}
+      <div className="border-t border-sidebar-border p-2">
+        {isMobile ? (
+          <button
+            type="button"
+            onClick={async () => {
+              if (onNavigate) onNavigate();
+              sileo.info({ title: "Cerrando sesión…", duration: 2000 });
+              await logoutAction();
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive transition-all duration-200 hover:bg-destructive/10 active:scale-95"
+          >
+            <Icon icon="solar:logout-3-bold" className="h-5 w-5 shrink-0" />
+            Cerrar sesión
+          </button>
+        ) : collapsed ? (
+          <button
+            type="button"
+            onClick={async () => {
+              sileo.info({ title: "Cerrando sesión…", duration: 2000 });
+              await logoutAction();
+            }}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-destructive transition-all duration-200 hover:bg-destructive/10 active:scale-95 mx-auto"
+            aria-label="Cerrar sesión"
+          >
+            <Icon icon="solar:logout-3-bold" className="h-5 w-5 shrink-0" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={async () => {
+              sileo.info({ title: "Cerrando sesión…", duration: 2000 });
+              await logoutAction();
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive transition-all duration-200 hover:bg-destructive/10 active:scale-95"
+          >
+            <Icon icon="solar:logout-3-bold" className="h-5 w-5 shrink-0" />
+            Cerrar sesión
+          </button>
+        )}
+      </div>
     </div>
   );
 }

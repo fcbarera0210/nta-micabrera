@@ -3,30 +3,35 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
+import { sileo } from "sileo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { loginAction } from "./actions";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberSession, setRememberSession] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Maqueta: simular delay; en una iteración futura se usará Vercel Auth
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    // Cookie mock para poder entrar al dashboard en esta iteración
-    document.cookie = "admin_session_mock=1; path=/; max-age=86400";
-    setIsLoading(false);
-    router.push("/admin");
+
+    const result = await loginAction(email, password);
+
+    if (result?.error) {
+      sileo.error({
+        title: "Acceso denegado",
+        description: result.error,
+      });
+      setIsLoading(false);
+    }
+    // Si no hay error, la server action redirige a /admin; loading se mantiene hasta la navegación
   };
 
   return (
@@ -90,6 +95,7 @@ export default function AdminLoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-background"
                   required
+                  disabled={isLoading}
                 />
               </Field>
               <Field>
@@ -101,6 +107,7 @@ export default function AdminLoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-background"
                   required
+                  disabled={isLoading}
                 />
               </Field>
               <div className="flex items-center gap-2">
@@ -108,6 +115,7 @@ export default function AdminLoginPage() {
                   id="remember"
                   checked={rememberSession}
                   onCheckedChange={(checked) => setRememberSession(!!checked)}
+                  disabled={isLoading}
                 />
                 <label htmlFor="remember" className="text-sm text-muted-foreground">
                   Recordar sesión
