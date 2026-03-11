@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DashboardMetrics } from "@/lib/admin/metrics";
-import type { ReservationWithService } from "../reservas/actions";
+import type { ReservationWithService } from "./reservas/actions";
 
 const cardVariants = {
   initial: { opacity: 0, y: 12 },
