@@ -33,6 +33,14 @@ export const reservationStatusEnum = pgEnum("reservation_status", [
   "cancelled",
 ]);
 
+export const recipeDifficultyEnum = pgEnum("recipe_difficulty", [
+  "easy",
+  "medium",
+  "hard",
+]);
+
+export const recipeStatusEnum = pgEnum("recipe_status", ["draft", "published"]);
+
 // ── Services ─────────────────────────────────────────────────────────────────
 
 export const services = pgTable("services", {
@@ -175,6 +183,97 @@ export const reservations = pgTable(
 export type Reservation = typeof reservations.$inferSelect;
 export type NewReservation = typeof reservations.$inferInsert;
 
+// ── Recipes ──────────────────────────────────────────────────────────────────
+
+export const recipeCategories = pgTable("recipe_categories", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  order: integer("order"),
+  active: boolean("active").notNull().default(true),
+});
+
+export type RecipeCategory = typeof recipeCategories.$inferSelect;
+export type NewRecipeCategory = typeof recipeCategories.$inferInsert;
+
+export const recipeTags = pgTable("recipe_tags", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  active: boolean("active").notNull().default(true),
+});
+
+export type RecipeTag = typeof recipeTags.$inferSelect;
+export type NewRecipeTag = typeof recipeTags.$inferInsert;
+
+export const recipes = pgTable("recipes", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  excerpt: text("excerpt"),
+  categoryId: integer("category_id")
+    .notNull()
+    .references(() => recipeCategories.id, { onDelete: "restrict" }),
+  prepTimeMinutes: integer("prep_time_minutes"),
+  difficulty: recipeDifficultyEnum("difficulty").notNull().default("easy"),
+  servings: integer("servings"),
+  imageUrl: text("image_url"),
+  videoUrl: text("video_url"),
+  status: recipeStatusEnum("status").notNull().default("draft"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type Recipe = typeof recipes.$inferSelect;
+export type NewRecipe = typeof recipes.$inferInsert;
+
+export const recipeTagsRel = pgTable(
+  "recipe_tags_rel",
+  {
+    recipeId: integer("recipe_id")
+      .notNull()
+      .references(() => recipes.id, { onDelete: "cascade" }),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => recipeTags.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    unique("recipe_tags_rel_recipe_tag_unique").on(t.recipeId, t.tagId),
+    index("recipe_tags_rel_recipe_idx").on(t.recipeId),
+    index("recipe_tags_rel_tag_idx").on(t.tagId),
+  ]
+);
+
+export type RecipeTagRelation = typeof recipeTagsRel.$inferSelect;
+
+export const recipeIngredients = pgTable("recipe_ingredients", {
+  id: serial("id").primaryKey(),
+  recipeId: integer("recipe_id")
+    .notNull()
+    .references(() => recipes.id, { onDelete: "cascade" }),
+  order: integer("order").notNull(),
+  name: text("name").notNull(),
+  quantity: text("quantity"),
+  notes: text("notes"),
+});
+
+export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
+export type NewRecipeIngredient = typeof recipeIngredients.$inferInsert;
+
+export const recipeSteps = pgTable("recipe_steps", {
+  id: serial("id").primaryKey(),
+  recipeId: integer("recipe_id")
+    .notNull()
+    .references(() => recipes.id, { onDelete: "cascade" }),
+  order: integer("order").notNull(),
+  title: text("title"),
+  content: text("content").notNull(),
+});
+
+export type RecipeStep = typeof recipeSteps.$inferSelect;
+export type NewRecipeStep = typeof recipeSteps.$inferInsert;
+
 // ── Relations ─────────────────────────────────────────────────────────────────
 
 export const availabilityPatternsRelations = relations(
@@ -217,5 +316,57 @@ export const reservationsRelations = relations(reservations, ({ one }) => ({
   patient: one(patients, {
     fields: [reservations.patientId],
     references: [patients.id],
+  }),
+}));
+
+export const recipeCategoriesRelations = relations(
+  recipeCategories,
+  ({ many }) => ({
+    recipes: many(recipes),
+  })
+);
+
+export const recipeTagsRelations = relations(recipeTags, ({ many }) => ({
+  recipeLinks: many(recipeTagsRel),
+}));
+
+export const recipesRelations = relations(recipes, ({ one, many }) => ({
+  category: one(recipeCategories, {
+    fields: [recipes.categoryId],
+    references: [recipeCategories.id],
+  }),
+  ingredients: many(recipeIngredients),
+  steps: many(recipeSteps),
+  tags: many(recipeTagsRel),
+}));
+
+export const recipeTagsRelRelations = relations(
+  recipeTagsRel,
+  ({ one }) => ({
+    recipe: one(recipes, {
+      fields: [recipeTagsRel.recipeId],
+      references: [recipes.id],
+    }),
+    tag: one(recipeTags, {
+      fields: [recipeTagsRel.tagId],
+      references: [recipeTags.id],
+    }),
+  })
+);
+
+export const recipeIngredientsRelations = relations(
+  recipeIngredients,
+  ({ one }) => ({
+    recipe: one(recipes, {
+      fields: [recipeIngredients.recipeId],
+      references: [recipes.id],
+    }),
+  })
+);
+
+export const recipeStepsRelations = relations(recipeSteps, ({ one }) => ({
+  recipe: one(recipes, {
+    fields: [recipeSteps.recipeId],
+    references: [recipes.id],
   }),
 }));

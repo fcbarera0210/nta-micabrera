@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfDay, isBefore } from 'date-fns';
@@ -9,9 +10,12 @@ import { es } from 'date-fns/locale';
 import { getActiveServices, getAvailableSlots, createReservation } from '@/app/actions/booking';
 import type { Modality } from '@/app/actions/booking';
 import type { TimeSlot } from '@/lib/availability/slots';
-import type { Service } from '@/lib/db/schema';
+import type { Service, RecipeCategory } from '@/lib/db/schema';
+import type { RecipeWithRelations } from '@/lib/db/recipes';
 import { isValidRut } from '@/lib/validation/rut';
 import { isValidChilePhone } from '@/lib/validation/phone';
+import { PublicFooter } from '@/components/PublicFooter';
+import { PublicHeader } from '@/components/PublicHeader';
 
 // Iconos SVG personalizados
 const HeartIcon = () => (
@@ -46,8 +50,12 @@ const FloatingBubble = ({ className, delay = 0 }: { className: string; delay?: n
 const HERO_IMG = '/mica-2.jpeg';
 const CONTACT_IMG = '/mica-2.jpeg';
 
-export default function HomePage() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+interface HomePageProps {
+  initialRecipes: RecipeWithRelations[];
+  initialRecipeCategories: RecipeCategory[];
+}
+
+export default function HomePage({ initialRecipes, initialRecipeCategories }: HomePageProps) {
   const [bookingStep, setBookingStep] = useState(1);
   const [activeCategory, setActiveCategory] = useState('Todas');
 
@@ -221,94 +229,18 @@ export default function HomePage() {
     },
   };
 
-  const recipes = [
-    { id: 1, title: 'Bowl de Avena y Frutos Rojos', category: 'Desayunos', time: '10 min', img: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=800&q=80' },
-    { id: 2, title: 'Ensalada de Garbanzos Crunchy', category: 'Almuerzos', time: '20 min', img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80' },
-    { id: 3, title: 'Hummus de Betarraga', category: 'Snacks', time: '15 min', img: 'https://images.unsplash.com/photo-1541518763669-27fef04b14ea?auto=format&fit=crop&w=800&q=80' },
-    { id: 4, title: 'Smoothie Verde Energizante', category: 'Desayunos', time: '5 min', img: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80' },
-  ];
+  const recipes = initialRecipes;
+  const recipeCategories = initialRecipeCategories;
+  const categoryFilterOptions = ['Todas', ...recipeCategories.map((c) => c.name)];
 
-  const filteredRecipes = activeCategory === 'Todas' ? recipes : recipes.filter((r) => r.category === activeCategory);
+  const filteredRecipes =
+    activeCategory === 'Todas'
+      ? recipes
+      : recipes.filter((r) => r.category?.name === activeCategory);
 
   return (
     <div className="min-h-screen bg-[#faf8ff] font-sans text-slate-800 overflow-x-hidden selection:bg-purple-200">
-      {/* --- Navegación --- */}
-      <nav className="fixed w-full z-50 bg-white/70 backdrop-blur-lg border-b border-purple-100">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg flex items-center justify-center">
-              <Image src="/svg/isotipo-1.svg" alt="Mica Cabrera" width={32} height={32} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-serif font-bold text-purple-950 leading-none">Mica Cabrera</span>
-              <span className="text-[10px] uppercase tracking-widest text-purple-600 font-bold">Nutricionista</span>
-            </div>
-          </div>
-
-          <div className="hidden md:flex gap-8 text-sm font-semibold text-purple-950/70">
-            {['Inicio', 'Sobre mí', 'Dirigido a', 'Servicios', 'Recetas', 'Contacto', 'Reserva'].map((item) => (
-              <button
-                key={item}
-                onClick={() => {
-                  const id = item.toLowerCase().replace(' ', '-');
-                  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="hover:text-purple-600 transition-colors relative group"
-              >
-                {item}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-purple-400 transition-all group-hover:w-full" />
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => document.getElementById('reserva')?.scrollIntoView({ behavior: 'smooth' })}
-            className="hidden md:block bg-purple-900 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-purple-800 transition-all shadow-lg"
-          >
-            Agendar Hora
-          </button>
-
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-purple-900" aria-label="Abrir menú">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
-        </div>
-      </nav>
-
-      {/* Menú Móvil */}
-      <AnimatePresence>
-        {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-purple-950 text-white p-10 flex flex-col justify-center gap-8 text-center"
-          >
-            <button onClick={() => setIsMenuOpen(false)} className="absolute top-8 right-8 p-2" aria-label="Cerrar menú">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-            {[
-              { label: 'Inicio', id: 'inicio' },
-              { label: 'Sobre mí', id: 'sobre-mí' },
-              { label: 'Dirigido a', id: 'dirigido-a' },
-              { label: 'Servicios', id: 'servicios' },
-              { label: 'Recetas', id: 'recetas' },
-              { label: 'Contacto', id: 'contacto' },
-              { label: 'Agendar', id: 'reserva' },
-            ].map(({ label, id }) => (
-              <button
-                key={id}
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="text-4xl font-serif"
-              >
-                {label}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <PublicHeader />
 
       {/* --- Hero Section --- */}
       <header id="inicio" className="relative pt-44 pb-24 px-6 overflow-hidden">
@@ -528,7 +460,7 @@ export default function HomePage() {
               <p className="text-slate-500 font-medium">Ideas ricas, fáciles y nutritivas para tu día a día.</p>
             </div>
             <div className="flex flex-col md:flex-row gap-2 p-1.5 bg-purple-50 rounded-2xl md:overflow-x-auto no-scrollbar">
-              {['Todas', 'Desayunos', 'Almuerzos', 'Snacks'].map((cat) => (
+              {categoryFilterOptions.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
@@ -552,29 +484,41 @@ export default function HomePage() {
                   whileHover={{ y: -10 }}
                   className="group relative aspect-[9/16] rounded-[40px] overflow-hidden shadow-xl cursor-pointer"
                 >
-                  <Image src={recipe.img} alt={recipe.title} fill className="object-cover transition-transform duration-700 group-hover:scale-110" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-purple-950/90 via-purple-900/20 to-transparent" />
+                  <Link href={`/recetas/${recipe.slug}`} className="block w-full h-full relative">
+                    <Image
+                      src={recipe.imageUrl || '/mica-2.jpeg'}
+                      alt={recipe.title}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-purple-950/90 via-purple-900/20 to-transparent" />
 
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
-                      <PlayIcon />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
+                        <PlayIcon />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="absolute bottom-0 left-0 p-8 w-full">
-                    <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md text-[10px] font-bold text-white rounded-lg mb-3 uppercase tracking-widest">{recipe.category}</span>
-                    <h4 className="text-xl font-bold text-white leading-tight mb-2">{recipe.title}</h4>
-                    <p className="text-white/60 text-xs font-medium flex items-center gap-2">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                      {recipe.time}
-                    </p>
-                  </div>
+                    <div className="absolute bottom-0 left-0 p-8 w-full">
+                      <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md text-[10px] font-bold text-white rounded-lg mb-3 uppercase tracking-widest">
+                        {recipe.category?.name ?? 'Sin categoría'}
+                      </span>
+                      <h4 className="text-xl font-bold text-white leading-tight mb-2">
+                        {recipe.title}
+                      </h4>
+                      <p className="text-white/60 text-xs font-medium flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        {recipe.prepTimeMinutes ? `${recipe.prepTimeMinutes} min` : 'Tiempo variable'}
+                      </p>
+                    </div>
+                  </Link>
                 </motion.div>
               ))}
             </AnimatePresence>
           </div>
 
-          <div className="mt-16 text-center">
+          <div className="mt-16 flex flex-col items-center gap-4 md:flex-row md:justify-center md:gap-6">
             <a
               href="https://www.instagram.com/nta.micabrera/"
               target="_blank"
@@ -584,6 +528,13 @@ export default function HomePage() {
               Ver más recetas en Instagram
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="group-hover:translate-x-1 transition-transform"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </a>
+            <Link
+              href="/recetas"
+              className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-purple-50 text-purple-900 font-bold border border-purple-100 hover:bg-purple-100 transition-all group"
+            >
+              Ver todas las recetas
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="group-hover:translate-x-1 transition-transform"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </Link>
           </div>
         </div>
       </section>
@@ -873,35 +824,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* --- Footer --- */}
-      <footer className="bg-white pt-24 pb-12 px-6 border-t border-purple-50">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="flex flex-col items-center gap-6 mb-12">
-            <div className="p-3 rounded-2xl flex items-center justify-center">
-              <Image src="/svg/isotipo-1.svg" alt="Mica Cabrera" width={48} height={48} />
-            </div>
-            <h4 className="text-3xl font-serif text-purple-950">Nutrición Mica Cabrera</h4>
-            <div className="flex gap-10 text-sm font-bold text-purple-600/60 uppercase tracking-widest">
-              <a href="https://www.instagram.com/nta.micabrera/" target="_blank" rel="noopener noreferrer" className="hover:text-purple-900 transition-colors">Instagram</a>
-              <span className="hover:text-purple-900 transition-colors cursor-pointer">WhatsApp</span>
-              <span className="hover:text-purple-900 transition-colors cursor-pointer">Email</span>
-            </div>
-          </div>
-          <p className="text-xs text-slate-300 font-medium tracking-wide italic">&quot;Por una nutrición más humana, inclusiva y libre de juicios&quot;</p>
-          <div className="w-16 h-px bg-slate-100 mx-auto my-8" />
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-            © 2026 Mica Cabrera • Hecho con 💜 por{' '}
-            <a
-              href="https://charlideas.vercel.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-500 hover:text-purple-700 transition-colors normal-case"
-            >
-              charl!deas
-            </a>
-          </p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
