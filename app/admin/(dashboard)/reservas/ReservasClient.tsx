@@ -45,7 +45,7 @@ import {
   HistoryIcon,
   FileTextIcon,
 } from "lucide-react";
-import { toast } from "sonner";
+import { sileo } from "sileo";
 import { type Service } from "@/lib/db/schema";
 import { type TimeSlot } from "@/lib/availability/slots";
 import { AdminCalendar } from "@/components/admin/admin-calendar";
@@ -177,7 +177,10 @@ function NewReservationDialog({
         setError(result.error ?? "Error al crear la reserva.");
         return;
       }
-      toast.success("Reserva creada correctamente.");
+      sileo.success({
+        title: "Reserva creada",
+        description: "La reserva se creó correctamente.",
+      });
       onCreated(input);
       handleOpenChange(false);
     });
@@ -516,7 +519,10 @@ function ListTab({ reservations: initial, onStatusChange, onOpenHistory }: ListT
     startTransition(async () => {
       const result = await updateReservationStatus(id, status);
       if (!result.success) {
-        toast.error(result.error ?? "Error al actualizar estado.");
+        sileo.error({
+          title: "No se pudo actualizar el estado",
+          description: result.error ?? "Ocurrió un error al actualizar el estado de la reserva.",
+        });
         setItems(initial);
       } else {
         onStatusChange();
@@ -535,7 +541,10 @@ function ListTab({ reservations: initial, onStatusChange, onOpenHistory }: ListT
     startTransition(async () => {
       const result = await updateReservationProfessionalNotes(notesDialogReservationId, value);
       if (!result.success) {
-        toast.error(result.error ?? "Error al guardar notas.");
+        sileo.error({
+          title: "No se pudieron guardar las notas",
+          description: result.error ?? "Ocurrió un error al guardar las notas del profesional.",
+        });
         return;
       }
       setItems((prev) =>
@@ -545,7 +554,10 @@ function ListTab({ reservations: initial, onStatusChange, onOpenHistory }: ListT
       );
       setNotesDialogReservationId(null);
       onStatusChange();
-      toast.success("Notas guardadas.");
+      sileo.success({
+        title: "Notas guardadas",
+        description: "Las notas del profesional se guardaron correctamente.",
+      });
     });
   }
 

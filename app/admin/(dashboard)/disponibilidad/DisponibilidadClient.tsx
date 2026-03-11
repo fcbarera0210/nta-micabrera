@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { PlusIcon, Trash2Icon, SaveIcon } from "lucide-react";
-import { toast } from "sonner";
+import { sileo } from "sileo";
 import {
   saveAvailability,
   type WeeklyAvailability,
@@ -287,9 +287,18 @@ export function DisponibilidadClient({ presencialData, onlineData }: Props) {
       ]);
 
       if (!res1.success || !res2.success) {
-        toast.error(res1.error ?? res2.error ?? "Error al guardar.");
+        sileo.error({
+          title: "No se pudo guardar la disponibilidad",
+          description:
+            res1.error ??
+            res2.error ??
+            "Ocurrió un error al guardar la configuración de disponibilidad.",
+        });
       } else {
-        toast.success("Disponibilidad guardada correctamente.");
+        sileo.success({
+          title: "Disponibilidad guardada",
+          description: "Los horarios de atención se guardaron correctamente.",
+        });
       }
     });
   }
@@ -299,7 +308,10 @@ export function DisponibilidadClient({ presencialData, onlineData }: Props) {
       presencial: cloneDays(presencialData.days),
       online: cloneDays(onlineData.days),
     });
-    toast.info("Cambios descartados.");
+    sileo.info({
+      title: "Cambios descartados",
+      description: "Se restauró la disponibilidad anterior sin guardar cambios.",
+    });
   }
 
   return (

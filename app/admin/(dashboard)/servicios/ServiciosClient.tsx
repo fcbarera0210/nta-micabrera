@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PlusIcon, PencilIcon, Trash2Icon, ClockIcon } from "lucide-react";
-import { toast } from "sonner";
+import { sileo } from "sileo";
 import { type Service } from "@/lib/db/schema";
 import {
   createService,
@@ -167,10 +167,16 @@ export function ServiciosClient({ initialServices }: Props) {
   async function handleCreate(input: ServiceInput) {
     const result = await createService(input);
     if (!result.success) {
-      toast.error(result.error ?? "Error al crear servicio.");
+      sileo.error({
+        title: "No se pudo crear el servicio",
+        description: result.error ?? "Ocurrió un error al crear el servicio.",
+      });
       return;
     }
-    toast.success("Servicio creado.");
+    sileo.success({
+      title: "Servicio creado",
+      description: "El servicio se creó correctamente.",
+    });
     setCreateOpen(false);
     // Optimistic: refresh will handle actual state via revalidatePath
     window.location.reload();
@@ -180,10 +186,16 @@ export function ServiciosClient({ initialServices }: Props) {
     if (!editTarget) return;
     const result = await updateService(editTarget.id, input);
     if (!result.success) {
-      toast.error(result.error ?? "Error al actualizar servicio.");
+      sileo.error({
+        title: "No se pudo actualizar el servicio",
+        description: result.error ?? "Ocurrió un error al actualizar el servicio.",
+      });
       return;
     }
-    toast.success("Servicio actualizado.");
+    sileo.success({
+      title: "Servicio actualizado",
+      description: "Los cambios del servicio se guardaron correctamente.",
+    });
     setEditTarget(null);
     window.location.reload();
   }
@@ -195,7 +207,10 @@ export function ServiciosClient({ initialServices }: Props) {
     startTransition(async () => {
       const result = await toggleService(service.id, active);
       if (!result.success) {
-        toast.error(result.error);
+        sileo.error({
+          title: "No se pudo cambiar el estado",
+          description: result.error ?? "Ocurrió un error al actualizar el estado del servicio.",
+        });
         setServiceList((prev) =>
           prev.map((s) => (s.id === service.id ? { ...s, active: !active } : s))
         );
@@ -208,9 +223,15 @@ export function ServiciosClient({ initialServices }: Props) {
     startTransition(async () => {
       const result = await deleteService(deleteTarget.id);
       if (!result.success) {
-        toast.error(result.error ?? "Error al eliminar.");
+        sileo.error({
+          title: "No se pudo eliminar el servicio",
+          description: result.error ?? "Ocurrió un error al eliminar el servicio.",
+        });
       } else {
-        toast.success("Servicio eliminado.");
+        sileo.success({
+          title: "Servicio eliminado",
+          description: "El servicio se eliminó correctamente.",
+        });
         setServiceList((prev) => prev.filter((s) => s.id !== deleteTarget.id));
       }
       setDeleteTarget(null);

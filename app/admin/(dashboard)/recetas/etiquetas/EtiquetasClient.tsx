@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { sileo } from "sileo";
 import { PlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
 
 import { type RecipeTag } from "@/lib/db/schema";
@@ -90,10 +90,17 @@ export function EtiquetasClient({ initialTags }: Props) {
       if (editing) {
         const result = await updateRecipeTag(editing.id, form);
         if (!result.success) {
-          toast.error(result.error ?? "Error al actualizar la etiqueta.");
+          sileo.error({
+            title: "No se pudo actualizar la etiqueta",
+            description:
+              result.error ?? "Ocurrió un error al actualizar la etiqueta.",
+          });
           return;
         }
-        toast.success("Etiqueta actualizada.");
+        sileo.success({
+          title: "Etiqueta actualizada",
+          description: "Los cambios de la etiqueta se guardaron correctamente.",
+        });
         setTags((prev) =>
           prev.map((t) =>
             t.id === editing.id
@@ -110,10 +117,17 @@ export function EtiquetasClient({ initialTags }: Props) {
       } else {
         const result = await createRecipeTag(form);
         if (!result.success) {
-          toast.error(result.error ?? "Error al crear la etiqueta.");
+          sileo.error({
+            title: "No se pudo crear la etiqueta",
+            description:
+              result.error ?? "Ocurrió un error al crear la etiqueta.",
+          });
           return;
         }
-        toast.success("Etiqueta creada.");
+        sileo.success({
+          title: "Etiqueta creada",
+          description: "La etiqueta se creó correctamente.",
+        });
         window.location.reload();
       }
       setEditing(null);
@@ -128,7 +142,11 @@ export function EtiquetasClient({ initialTags }: Props) {
     startTransition(async () => {
       const result = await toggleRecipeTagActive(tag.id, active);
       if (!result.success) {
-        toast.error(result.error ?? "Error al cambiar el estado.");
+        sileo.error({
+          title: "No se pudo cambiar el estado",
+          description:
+            result.error ?? "Ocurrió un error al cambiar el estado de la etiqueta.",
+        });
         setTags((prev) =>
           prev.map((t) =>
             t.id === tag.id ? { ...t, active: !active } : t
@@ -143,9 +161,16 @@ export function EtiquetasClient({ initialTags }: Props) {
     startTransition(async () => {
       const result = await deleteRecipeTag(deleteTarget.id);
       if (!result.success) {
-        toast.error(result.error ?? "Error al eliminar la etiqueta.");
+        sileo.error({
+          title: "No se pudo eliminar la etiqueta",
+          description:
+            result.error ?? "Ocurrió un error al eliminar la etiqueta.",
+        });
       } else {
-        toast.success("Etiqueta eliminada.");
+        sileo.success({
+          title: "Etiqueta eliminada",
+          description: "La etiqueta se eliminó correctamente.",
+        });
         setTags((prev) => prev.filter((t) => t.id !== deleteTarget.id));
       }
       setDeleteTarget(null);

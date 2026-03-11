@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { PlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
-import { toast } from "sonner";
+import { sileo } from "sileo";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -679,10 +679,16 @@ export function RecetasClient({ initialRecipes, categories, tags }: Props) {
   async function handleCreate(input: RecipeFormInput) {
     const result = await createRecipe(input);
     if (!result.success || !result.recipe) {
-      toast.error(result.error ?? "Error al crear la receta.");
+      sileo.error({
+        title: "No se pudo crear la receta",
+        description: result.error ?? "Ocurrió un error al crear la receta.",
+      });
       return;
     }
-    toast.success("Receta creada.");
+    sileo.success({
+      title: "Receta creada",
+      description: "La receta se creó correctamente.",
+    });
     setShowForm(false);
     setRecipesState((prev) => [result.recipe as RecipeWithExtras, ...prev]);
   }
@@ -691,10 +697,16 @@ export function RecetasClient({ initialRecipes, categories, tags }: Props) {
     if (!editingRecipe) return;
     const result = await updateRecipe(editingRecipe.id, input);
     if (!result.success) {
-      toast.error(result.error ?? "Error al actualizar la receta.");
+      sileo.error({
+        title: "No se pudo actualizar la receta",
+        description: result.error ?? "Ocurrió un error al actualizar la receta.",
+      });
       return;
     }
-    toast.success("Receta actualizada.");
+    sileo.success({
+      title: "Receta actualizada",
+      description: "Los cambios de la receta se guardaron correctamente.",
+    });
     setShowForm(false);
     startTransition(async () => {
       // Para simplificar, recargamos la página para refrescar datos relacionados
@@ -712,7 +724,10 @@ export function RecetasClient({ initialRecipes, categories, tags }: Props) {
     startTransition(async () => {
       const result = await toggleRecipeStatus(recipe.id, nextStatus);
       if (!result.success) {
-        toast.error(result.error ?? "Error al cambiar el estado.");
+        sileo.error({
+          title: "No se pudo cambiar el estado",
+          description: result.error ?? "Ocurrió un error al cambiar el estado de la receta.",
+        });
         setRecipesState((prev) =>
           prev.map((r) =>
             r.id === recipe.id ? { ...r, status: recipe.status } : r
@@ -727,9 +742,15 @@ export function RecetasClient({ initialRecipes, categories, tags }: Props) {
     startTransition(async () => {
       const result = await deleteRecipe(deleteTarget.id);
       if (!result.success) {
-        toast.error(result.error ?? "Error al eliminar la receta.");
+        sileo.error({
+          title: "No se pudo eliminar la receta",
+          description: result.error ?? "Ocurrió un error al eliminar la receta.",
+        });
       } else {
-        toast.success("Receta eliminada.");
+        sileo.success({
+          title: "Receta eliminada",
+          description: "La receta se eliminó correctamente.",
+        });
         setRecipesState((prev) =>
           prev.filter((r) => r.id !== deleteTarget.id)
         );

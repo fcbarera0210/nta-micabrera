@@ -37,7 +37,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PlusIcon, PencilIcon, Trash2Icon, HistoryIcon } from "lucide-react";
-import { toast } from "sonner";
+import { sileo } from "sileo";
 import { formatRut } from "@/lib/validation/rut";
 import { isValidRut } from "@/lib/validation/rut";
 import { isValidChilePhone } from "@/lib/validation/phone";
@@ -147,7 +147,12 @@ export function PacientesClient({ initialPatients }: Props) {
         setError(result.error ?? "Error al guardar.");
         return;
       }
-      toast.success(editingId ? "Paciente actualizado." : "Paciente creado.");
+      sileo.success({
+        title: editingId ? "Paciente actualizado" : "Paciente creado",
+        description: editingId
+          ? "Los datos del paciente se actualizaron correctamente."
+          : "El paciente se creó correctamente.",
+      });
       setDialogOpen(false);
       refreshPatients();
     });
@@ -159,10 +164,16 @@ export function PacientesClient({ initialPatients }: Props) {
       const result = await deletePatient(deleteId);
       setDeleteId(null);
       if (!result.success) {
-        toast.error(result.error ?? "Error al eliminar.");
+        sileo.error({
+          title: "No se pudo eliminar el paciente",
+          description: result.error ?? "Ocurrió un error al eliminar el paciente.",
+        });
         return;
       }
-      toast.success("Paciente eliminado.");
+      sileo.success({
+        title: "Paciente eliminado",
+        description: "El paciente se eliminó correctamente.",
+      });
       refreshPatients();
     });
   }

@@ -53,9 +53,14 @@ const CONTACT_IMG = '/mica-2.jpeg';
 interface HomePageProps {
   initialRecipes: RecipeWithRelations[];
   initialRecipeCategories: RecipeCategory[];
+  siteSettings: {
+    whatsappPhone: string | null;
+    contactEmail: string | null;
+    instagramHandle: string | null;
+  } | null;
 }
 
-export default function HomePage({ initialRecipes, initialRecipeCategories }: HomePageProps) {
+export default function HomePage({ initialRecipes, initialRecipeCategories, siteSettings }: HomePageProps) {
   const [bookingStep, setBookingStep] = useState(1);
   const [activeCategory, setActiveCategory] = useState('Todas');
 
@@ -237,6 +242,13 @@ export default function HomePage({ initialRecipes, initialRecipeCategories }: Ho
     activeCategory === 'Todas'
       ? recipes
       : recipes.filter((r) => r.category?.name === activeCategory);
+
+  const whatsappNumber = siteSettings?.whatsappPhone?.replace(/\D/g, "") || "";
+  const hasWhatsapp = whatsappNumber.length > 0;
+  const whatsappHref = hasWhatsapp ? `https://wa.me/${whatsappNumber}` : "#";
+
+  const instagramHandle = siteSettings?.instagramHandle || "nta.micabrera";
+  const instagramUrl = `https://www.instagram.com/${instagramHandle.replace(/^@/, "")}/`;
 
   return (
     <div className="min-h-screen bg-[#faf8ff] font-sans text-slate-800 overflow-x-hidden selection:bg-purple-200">
@@ -520,7 +532,7 @@ export default function HomePage({ initialRecipes, initialRecipeCategories }: Ho
 
           <div className="mt-16 flex flex-col items-center gap-4 md:flex-row md:justify-center md:gap-6">
             <a
-              href="https://www.instagram.com/nta.micabrera/"
+              href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-slate-50 text-purple-900 font-bold border border-slate-200 hover:bg-purple-50 transition-all group"
@@ -565,7 +577,7 @@ export default function HomePage({ initialRecipes, initialRecipeCategories }: Ho
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                 <a
-                  href="#"
+                  href={whatsappHref}
                   className="inline-flex items-center justify-center gap-3 bg-[#25D366] text-white px-10 py-5 rounded-2xl font-bold shadow-xl shadow-green-100 hover:scale-105 transition-all"
                 >
                   <Icon icon="simple-icons:whatsapp" width={24} height={24} />
@@ -824,7 +836,11 @@ export default function HomePage({ initialRecipes, initialRecipeCategories }: Ho
         </div>
       </section>
 
-      <PublicFooter />
+      <PublicFooter
+        whatsappPhone={siteSettings?.whatsappPhone}
+        contactEmail={siteSettings?.contactEmail}
+        instagramHandle={siteSettings?.instagramHandle}
+      />
     </div>
   );
 }

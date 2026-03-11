@@ -274,6 +274,19 @@ export const recipeSteps = pgTable("recipe_steps", {
 export type RecipeStep = typeof recipeSteps.$inferSelect;
 export type NewRecipeStep = typeof recipeSteps.$inferInsert;
 
+// ── Site settings (contact & social) ───────────────────────────────────────────
+
+export const siteSettings = pgTable("site_settings", {
+  id: integer("id").primaryKey().notNull(),
+  whatsappPhone: text("whatsapp_phone"),
+  contactEmail: text("contact_email"),
+  instagramHandle: text("instagram_handle"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type SiteSettings = typeof siteSettings.$inferSelect;
+export type NewSiteSettings = typeof siteSettings.$inferInsert;
+
 // ── Relations ─────────────────────────────────────────────────────────────────
 
 export const availabilityPatternsRelations = relations(

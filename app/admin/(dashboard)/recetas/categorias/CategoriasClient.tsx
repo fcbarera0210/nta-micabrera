@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { sileo } from "sileo";
 import { PlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
 
 import { type RecipeCategory } from "@/lib/db/schema";
@@ -91,10 +91,17 @@ export function CategoriasClient({ initialCategories }: Props) {
       if (editing) {
         const result = await updateRecipeCategory(editing.id, form);
         if (!result.success) {
-          toast.error(result.error ?? "Error al actualizar la categoría.");
+          sileo.error({
+            title: "No se pudo actualizar la categoría",
+            description:
+              result.error ?? "Ocurrió un error al actualizar la categoría.",
+          });
           return;
         }
-        toast.success("Categoría actualizada.");
+        sileo.success({
+          title: "Categoría actualizada",
+          description: "Los cambios de la categoría se guardaron correctamente.",
+        });
         setCategories((prev) =>
           prev.map((c) =>
             c.id === editing.id
@@ -111,10 +118,17 @@ export function CategoriasClient({ initialCategories }: Props) {
       } else {
         const result = await createRecipeCategory(form);
         if (!result.success) {
-          toast.error(result.error ?? "Error al crear la categoría.");
+          sileo.error({
+            title: "No se pudo crear la categoría",
+            description:
+              result.error ?? "Ocurrió un error al crear la categoría.",
+          });
           return;
         }
-        toast.success("Categoría creada.");
+        sileo.success({
+          title: "Categoría creada",
+          description: "La categoría se creó correctamente.",
+        });
         // Para mantenerlo simple, recargamos la página y dejamos que el server la ordene.
         window.location.reload();
       }
@@ -130,7 +144,11 @@ export function CategoriasClient({ initialCategories }: Props) {
     startTransition(async () => {
       const result = await toggleRecipeCategoryActive(category.id, active);
       if (!result.success) {
-        toast.error(result.error ?? "Error al cambiar el estado.");
+        sileo.error({
+          title: "No se pudo cambiar el estado",
+          description:
+            result.error ?? "Ocurrió un error al cambiar el estado de la categoría.",
+        });
         setCategories((prev) =>
           prev.map((c) =>
             c.id === category.id ? { ...c, active: !active } : c
@@ -145,9 +163,16 @@ export function CategoriasClient({ initialCategories }: Props) {
     startTransition(async () => {
       const result = await deleteRecipeCategory(deleteTarget.id);
       if (!result.success) {
-        toast.error(result.error ?? "Error al eliminar la categoría.");
+        sileo.error({
+          title: "No se pudo eliminar la categoría",
+          description:
+            result.error ?? "Ocurrió un error al eliminar la categoría.",
+        });
       } else {
-        toast.success("Categoría eliminada.");
+        sileo.success({
+          title: "Categoría eliminada",
+          description: "La categoría se eliminó correctamente.",
+        });
         setCategories((prev) =>
           prev.filter((c) => c.id !== deleteTarget.id)
         );

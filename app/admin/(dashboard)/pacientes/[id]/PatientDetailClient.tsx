@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArrowLeftIcon, FileTextIcon, PencilIcon, CalculatorIcon } from "lucide-react";
-import { toast } from "sonner";
+import { sileo } from "sileo";
 import { formatRut } from "@/lib/validation/rut";
 import { isValidRut } from "@/lib/validation/rut";
 import { isValidChilePhone } from "@/lib/validation/phone";
@@ -198,7 +198,10 @@ export function PatientDetailClient({
         setPatientError(result.error ?? "Error al guardar.");
         return;
       }
-      toast.success("Datos del paciente actualizados.");
+      sileo.success({
+        title: "Paciente actualizado",
+        description: "Los datos del paciente se guardaron correctamente.",
+      });
       setPatient((prev) => ({
         ...prev,
         name: form.name.trim(),
@@ -233,7 +236,10 @@ export function PatientDetailClient({
         value
       );
       if (!result.success) {
-        toast.error(result.error ?? "Error al guardar notas.");
+        sileo.error({
+          title: "No se pudieron guardar las notas",
+          description: result.error ?? "Ocurrió un error al guardar las notas.",
+        });
         return;
       }
       setReservations((prev) =>
@@ -244,7 +250,10 @@ export function PatientDetailClient({
         )
       );
       setNotesDialogReservation(null);
-      toast.success("Notas guardadas.");
+      sileo.success({
+        title: "Notas guardadas",
+        description: "Las notas del profesional se guardaron correctamente.",
+      });
     });
   }
 
