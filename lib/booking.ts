@@ -6,6 +6,7 @@
 import { db } from "@/lib/db";
 import {
   reservations,
+  patients,
   availabilityPatterns,
   availabilityBlocks,
   services,
@@ -19,6 +20,8 @@ import {
   type TimeSlot,
   intervalsOverlap,
 } from "@/lib/availability/slots";
+import { isValidRut, normalizeRut } from "@/lib/validation/rut";
+import { isValidChilePhone, normalizePhone } from "@/lib/validation/phone";
 
 export type Modality = "presencial" | "online";
 
@@ -28,9 +31,12 @@ export interface ReservationInput {
   date: string;
   startTime: string;
   endTime: string;
+  patientRut: string;
   patientName: string;
   patientEmail: string;
+  patientPhone: string;
   notes?: string;
+  professionalNotes?: string;
 }
 
 export async function getAvailableSlots(
@@ -117,16 +123,60 @@ export async function createReservation(
     return { success: false, error: "Conflicto de horario. Intenta de nuevo." };
   }
 
+  if (!isValidRut(input.patientRut)) {
+    return { success: false, error: "RUT inválido (verifique formato y dígito verificador)." };
+  }
+  if (!isValidChilePhone(input.patientPhone)) {
+    return {
+      success: false,
+      error: "El teléfono debe tener 9 dígitos numéricos (ej: 987654321).",
+    };
+  }
+
+  const normalizedRut = normalizeRut(input.patientRut);
+  const normalizedPhone = normalizePhone(input.patientPhone);
+
+  let patientId: number | null = null;
+  const existingPatient = await db.query.patients.findFirst({
+    where: eq(patients.rut, normalizedRut),
+  });
+  if (existingPatient) {
+    patientId = existingPatient.id;
+    await db
+      .update(patients)
+      .set({
+        name: input.patientName.trim(),
+        email: input.patientEmail.trim(),
+        phone: normalizedPhone,
+      })
+      .where(eq(patients.id, existingPatient.id));
+  } else {
+    const [newPatient] = await db
+      .insert(patients)
+      .values({
+        rut: normalizedRut,
+        name: input.patientName.trim(),
+        email: input.patientEmail.trim(),
+        phone: normalizedPhone,
+      })
+      .returning({ id: patients.id });
+    patientId = newPatient?.id ?? null;
+  }
+
   try {
     await db.insert(reservations).values({
       serviceId: input.serviceId,
+      patientId,
       modality: input.modality,
       date: input.date,
       startTime: input.startTime,
       endTime: input.endTime,
-      patientName: input.patientName,
-      patientEmail: input.patientEmail,
-      notes: input.notes || null,
+      patientRut: normalizedRut,
+      patientName: input.patientName.trim(),
+      patientEmail: input.patientEmail.trim(),
+      patientPhone: normalizedPhone,
+      notes: input.notes?.trim() || null,
+      professionalNotes: input.professionalNotes?.trim() || null,
       status: "confirmed",
     });
     return { success: true };

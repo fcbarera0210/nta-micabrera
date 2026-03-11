@@ -42,6 +42,8 @@ import {
   ClockIcon,
   UserIcon,
   FilterIcon,
+  HistoryIcon,
+  FileTextIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { type Service } from "@/lib/db/schema";
@@ -52,10 +54,14 @@ import {
   createReservation,
   listReservations,
   updateReservationStatus,
+  updateReservationProfessionalNotes,
   type ReservationWithService,
   type Modality,
   type ReservationInput,
 } from "./actions";
+import { PatientSessionHistoryDialog } from "../pacientes/PatientSessionHistoryDialog";
+import { isValidRut } from "@/lib/validation/rut";
+import { isValidChilePhone } from "@/lib/validation/phone";
 
 interface Props {
   initialServices: Service[];
@@ -103,29 +109,51 @@ function NewReservationDialog({
   modality,
   service,
 }: NewReservationDialogProps) {
+  const [rut, setRut] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [professionalNotes, setProfessionalNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleOpenChange(isOpen: boolean) {
     if (!isOpen) {
+      setRut("");
       setName("");
       setEmail("");
+      setPhone("");
       setNotes("");
+      setProfessionalNotes("");
       setError(null);
       onClose();
     }
   }
 
   function handleSubmit() {
+    if (!rut.trim()) {
+      setError("El RUT es obligatorio.");
+      return;
+    }
+    if (!isValidRut(rut)) {
+      setError("RUT inválido (verifique formato y dígito verificador).");
+      return;
+    }
     if (!name.trim()) {
       setError("El nombre del paciente es obligatorio.");
       return;
     }
     if (!email.trim() || !email.includes("@")) {
       setError("Ingresa un correo electrónico válido.");
+      return;
+    }
+    if (!phone.trim()) {
+      setError("El teléfono es obligatorio.");
+      return;
+    }
+    if (!isValidChilePhone(phone)) {
+      setError("El teléfono debe tener 9 dígitos numéricos (ej: 987654321).");
       return;
     }
 
@@ -135,9 +163,12 @@ function NewReservationDialog({
       date,
       startTime: slot.startTime,
       endTime: slot.endTime,
+      patientRut: rut.trim(),
       patientName: name.trim(),
       patientEmail: email.trim(),
+      patientPhone: phone.trim(),
       notes: notes.trim() || undefined,
+      professionalNotes: professionalNotes.trim() || undefined,
     };
 
     startTransition(async () => {
@@ -168,6 +199,19 @@ function NewReservationDialog({
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
+              RUT <span className="text-destructive">*</span>
+            </label>
+            <Input
+              placeholder="12.345.678-9"
+              value={rut}
+              onChange={(e) => {
+                setRut(e.target.value);
+                setError(null);
+              }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
               Nombre paciente <span className="text-destructive">*</span>
             </label>
             <Input
@@ -194,11 +238,34 @@ function NewReservationDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Notas (opcional)</label>
+            <label className="text-sm font-medium">
+              Teléfono <span className="text-destructive">*</span>
+            </label>
             <Input
-              placeholder="Información adicional…"
+              type="tel"
+              placeholder="987654321"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setError(null);
+              }}
+            />
+            <p className="text-xs text-muted-foreground">9 dígitos, sin espacios (ej: 987654321)</p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Notas del paciente (opcional)</label>
+            <Input
+              placeholder="Comentarios del paciente al reservar…"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Notas del profesional (opcional)</label>
+            <Input
+              placeholder="Notas internas para la consulta…"
+              value={professionalNotes}
+              onChange={(e) => setProfessionalNotes(e.target.value)}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -418,12 +485,15 @@ function CalendarTab({ services, onReservationCreated }: CalendarTabProps) {
 interface ListTabProps {
   reservations: ReservationWithService[];
   onStatusChange: () => void;
+  onOpenHistory: (patientId: number) => void;
 }
 
-function ListTab({ reservations: initial, onStatusChange }: ListTabProps) {
+function ListTab({ reservations: initial, onStatusChange, onOpenHistory }: ListTabProps) {
   const [items, setItems] = useState(initial);
   const [filterModality, setFilterModality] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [notesDialogReservationId, setNotesDialogReservationId] = useState<number | null>(null);
+  const [notesDialogValue, setNotesDialogValue] = useState("");
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -451,6 +521,31 @@ function ListTab({ reservations: initial, onStatusChange }: ListTabProps) {
       } else {
         onStatusChange();
       }
+    });
+  }
+
+  function openNotesDialog(r: ReservationWithService) {
+    setNotesDialogReservationId(r.id);
+    setNotesDialogValue(r.professionalNotes ?? "");
+  }
+
+  function saveProfessionalNotes() {
+    if (notesDialogReservationId == null) return;
+    const value = notesDialogValue.trim() || null;
+    startTransition(async () => {
+      const result = await updateReservationProfessionalNotes(notesDialogReservationId, value);
+      if (!result.success) {
+        toast.error(result.error ?? "Error al guardar notas.");
+        return;
+      }
+      setItems((prev) =>
+        prev.map((r) =>
+          r.id === notesDialogReservationId ? { ...r, professionalNotes: value } : r
+        )
+      );
+      setNotesDialogReservationId(null);
+      onStatusChange();
+      toast.success("Notas guardadas.");
     });
   }
 
@@ -502,6 +597,7 @@ function ListTab({ reservations: initial, onStatusChange }: ListTabProps) {
                   <TableHead>Horario</TableHead>
                   <TableHead>Modalidad</TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead className="max-w-[120px]">Notas prof.</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -540,8 +636,37 @@ function ListTab({ reservations: initial, onStatusChange }: ListTabProps) {
                           {STATUS_LABELS[r.status] ?? r.status}
                         </Badge>
                       </TableCell>
+                      <TableCell className="max-w-[120px]">
+                        <span className="text-xs text-muted-foreground line-clamp-2">
+                          {r.professionalNotes || "—"}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-1.5 text-xs mt-0.5"
+                          disabled={isPending}
+                          onClick={() => openNotesDialog(r)}
+                          title="Editar notas del profesional"
+                        >
+                          <FileTextIcon className="size-3.5 mr-0.5" />
+                          Editar
+                        </Button>
+                      </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end gap-1 flex-wrap">
+                          {r.patientId != null && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-7 px-2"
+                              disabled={isPending}
+                              onClick={() => onOpenHistory(r.patientId!)}
+                              title="Ver historial del paciente"
+                            >
+                              <HistoryIcon className="size-3.5 mr-0.5" />
+                              Historial
+                            </Button>
+                          )}
                           {r.status !== "confirmed" && (
                             <Button
                               variant="ghost"
@@ -574,6 +699,40 @@ function ListTab({ reservations: initial, onStatusChange }: ListTabProps) {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={notesDialogReservationId != null}
+        onOpenChange={(open) => !open && setNotesDialogReservationId(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Notas del profesional</DialogTitle>
+            <DialogDescription>
+              Notas internas para esta consulta (solo visibles en el admin).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <textarea
+              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="Notas de la sesión…"
+              value={notesDialogValue}
+              onChange={(e) => setNotesDialogValue(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setNotesDialogReservationId(null)}
+              disabled={isPending}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={saveProfessionalNotes} disabled={isPending}>
+              {isPending ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -582,6 +741,7 @@ function ListTab({ reservations: initial, onStatusChange }: ListTabProps) {
 
 export function ReservasClient({ initialServices, initialReservations }: Props) {
   const [reservations, setReservations] = useState(initialReservations);
+  const [historyPatientId, setHistoryPatientId] = useState<number | null>(null);
 
   async function refreshReservations() {
     const updated = await listReservations();
@@ -646,9 +806,18 @@ export function ReservasClient({ initialServices, initialReservations }: Props) 
           <ListTab
             reservations={reservations}
             onStatusChange={refreshReservations}
+            onOpenHistory={setHistoryPatientId}
           />
         </TabsContent>
       </Tabs>
+
+      {historyPatientId != null && (
+        <PatientSessionHistoryDialog
+          patientId={historyPatientId}
+          open={true}
+          onClose={() => setHistoryPatientId(null)}
+        />
+      )}
     </div>
   );
 }

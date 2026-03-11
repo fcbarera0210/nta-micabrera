@@ -10,6 +10,8 @@ import { getActiveServices, getAvailableSlots, createReservation } from '@/app/a
 import type { Modality } from '@/app/actions/booking';
 import type { TimeSlot } from '@/lib/availability/slots';
 import type { Service } from '@/lib/db/schema';
+import { isValidRut } from '@/lib/validation/rut';
+import { isValidChilePhone } from '@/lib/validation/phone';
 
 // Iconos SVG personalizados
 const HeartIcon = () => (
@@ -66,8 +68,10 @@ export default function HomePage() {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
 
   // Reserva: paso 4 — datos cliente
+  const [patientRut, setPatientRut] = useState('');
   const [patientName, setPatientName] = useState('');
   const [patientEmail, setPatientEmail] = useState('');
+  const [patientPhone, setPatientPhone] = useState('');
   const [patientNotes, setPatientNotes] = useState('');
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -139,8 +143,10 @@ export default function HomePage() {
     setBookingService(null);
     setSelectedDate(null);
     setSelectedSlot(null);
+    setPatientRut('');
     setPatientName('');
     setPatientEmail('');
+    setPatientPhone('');
     setPatientNotes('');
     setSubmitStatus('idle');
     setSubmitError(null);
@@ -148,12 +154,28 @@ export default function HomePage() {
 
   const handleConfirmReservation = async () => {
     if (!bookingService || !bookingDateStr || !selectedSlot) return;
+    if (!patientRut.trim()) {
+      setSubmitError('El RUT es obligatorio.');
+      return;
+    }
+    if (!isValidRut(patientRut)) {
+      setSubmitError('RUT inválido (verifique formato y dígito verificador).');
+      return;
+    }
     if (!patientName.trim() || !patientEmail.trim()) {
       setSubmitError('Nombre y correo son obligatorios.');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patientEmail)) {
       setSubmitError('Ingresa un correo electrónico válido.');
+      return;
+    }
+    if (!patientPhone.trim()) {
+      setSubmitError('El teléfono es obligatorio.');
+      return;
+    }
+    if (!isValidChilePhone(patientPhone)) {
+      setSubmitError('El teléfono debe tener 9 dígitos numéricos (ej: 987654321).');
       return;
     }
     setSubmitStatus('loading');
@@ -164,8 +186,10 @@ export default function HomePage() {
       date: bookingDateStr,
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
+      patientRut: patientRut.trim(),
       patientName: patientName.trim(),
       patientEmail: patientEmail.trim(),
+      patientPhone: patientPhone.trim(),
       notes: patientNotes.trim() || undefined,
     });
     if (result.success) {
@@ -778,6 +802,16 @@ export default function HomePage() {
                     </div>
                     <div className="space-y-4 mb-6">
                       <div>
+                        <label className="block text-sm font-bold text-purple-900 mb-1">RUT *</label>
+                        <input
+                          type="text"
+                          value={patientRut}
+                          onChange={(e) => setPatientRut(e.target.value)}
+                          placeholder="12.345.678-9"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-purple-100 focus:border-purple-500 outline-none"
+                        />
+                      </div>
+                      <div>
                         <label className="block text-sm font-bold text-purple-900 mb-1">Nombre completo *</label>
                         <input
                           type="text"
@@ -796,6 +830,17 @@ export default function HomePage() {
                           placeholder="tu@email.com"
                           className="w-full px-4 py-3 rounded-xl border-2 border-purple-100 focus:border-purple-500 outline-none"
                         />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-purple-900 mb-1">Teléfono *</label>
+                        <input
+                          type="tel"
+                          value={patientPhone}
+                          onChange={(e) => setPatientPhone(e.target.value)}
+                          placeholder="987654321"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-purple-100 focus:border-purple-500 outline-none"
+                        />
+                        <p className="text-xs text-purple-700/70 mt-1">9 dígitos, sin espacios (ej: 987654321)</p>
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-purple-900 mb-1">Notas (opcional)</label>

@@ -4,7 +4,7 @@ import { unstable_noStore } from "next/cache";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { reservations, services, type Reservation, type Service } from "@/lib/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, desc } from "drizzle-orm";
 import * as booking from "@/lib/booking";
 import type { TimeSlot } from "@/lib/availability/slots";
 
@@ -61,6 +61,34 @@ export async function updateReservationStatus(
   } catch {
     return { success: false, error: "Error al actualizar el estado." };
   }
+}
+
+export async function updateReservationProfessionalNotes(
+  id: number,
+  professionalNotes: string | null
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db
+      .update(reservations)
+      .set({ professionalNotes: professionalNotes?.trim() || null })
+      .where(eq(reservations.id, id));
+    revalidatePath("/admin/reservas");
+    return { success: true };
+  } catch {
+    return { success: false, error: "Error al actualizar las notas." };
+  }
+}
+
+/** Historial de sesiones (reservas) de un paciente por ID. */
+export async function getReservationsByPatientId(
+  patientId: number
+): Promise<ReservationWithService[]> {
+  const rows = await db.query.reservations.findMany({
+    where: eq(reservations.patientId, patientId),
+    orderBy: (r, { desc }) => [desc(r.date), desc(r.startTime)],
+    with: { service: true },
+  });
+  return rows as ReservationWithService[];
 }
 
 export async function getActiveServices(): Promise<Service[]> {
